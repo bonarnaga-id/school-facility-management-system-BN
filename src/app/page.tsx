@@ -54,6 +54,99 @@ function statusMtnTone(s:string){
   return "purple";
 }
 
+const ROLE_NAV: Record<string, {k:string; l:string; icon:string; desc:string}[]> = {
+  admin: [
+    {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
+    {k:"aset", l:"Manajemen Aset", icon:"📦", desc:"Inventaris aset sekolah"},
+    {k:"ruangan", l:"Ruangan & Lokasi", icon:"🏫", desc:"Kelola gedung & kelas"},
+    {k:"pemeliharaan", l:"Pemeliharaan", icon:"🔧", desc:"Work order & perbaikan"},
+    {k:"jadwal", l:"Jadwal Rutin", icon:"🗓️", desc:"Preventif & terjadwal"},
+    {k:"laporan", l:"Laporan", icon:"📊", desc:"Biaya & kondisi"},
+  ],
+  sarpras: [
+    {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
+    {k:"aset", l:"Manajemen Aset", icon:"📦", desc:"Inventaris aset sekolah"},
+    {k:"ruangan", l:"Ruangan & Lokasi", icon:"🏫", desc:"Kelola gedung & kelas"},
+    {k:"pemeliharaan", l:"Pemeliharaan", icon:"🔧", desc:"Work order & perbaikan"},
+    {k:"jadwal", l:"Jadwal Rutin", icon:"🗓️", desc:"Preventif & terjadwal"},
+    {k:"laporan", l:"Laporan", icon:"📊", desc:"Biaya & kondisi"},
+  ],
+  teknisi: [
+    {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
+    {k:"pemeliharaan", l:"Pemeliharaan", icon:"🔧", desc:"Work order saya"},
+    {k:"aset", l:"Aset", icon:"📦", desc:"Detail aset"},
+  ],
+  guru: [
+    {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
+    {k:"pemeliharaan", l:"Buat Laporan", icon:"📝", desc:"Laporkan kerusakan"},
+  ],
+  kepala_sekolah: [
+    {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
+    {k:"laporan", l:"Laporan", icon:"📊", desc:"Rekap & analitik"},
+  ],
+};
+
+const ROLE_HEADER_TITLES: Record<string, {[key: string]: string}> = {
+  admin: {dashboard:"Dasbor Sarpras", aset:"Manajemen Aset Sekolah", ruangan:"Ruangan & Lokasi", pemeliharaan:"Pemeliharaan & Perbaikan", jadwal:"Jadwal Pemeliharaan Rutin", laporan:"Laporan & Analitik"},
+  sarpras: {dashboard:"Dasbor Sarpras", aset:"Manajemen Aset Sekolah", ruangan:"Ruangan & Lokasi", pemeliharaan:"Pemeliharaan & Perbaikan", jadwal:"Jadwal Pemeliharaan Rutin", laporan:"Laporan & Analitik"},
+  teknisi: {dashboard:"Dasbor Teknisi", pemeliharaan:"Pemeliharaan Saya", aset:"Detail Aset"},
+  guru: {dashboard:"Dasbor Guru", pemeliharaan:"Buat Laporan Pemeliharaan"},
+  kepala_sekolah: {dashboard:"Dasbor Kepala Sekolah", laporan:"Laporan"},
+};
+
+function getRoleNav(role: string) {
+  return ROLE_NAV[role] || ROLE_NAV.admin;
+}
+
+function getHeaderTitle(role: string, tab: string): string {
+  const titles = ROLE_HEADER_TITLES[role] || ROLE_HEADER_TITLES.admin;
+  return titles[tab] || "Dasbor Sarpras";
+}
+
+function getHeaderDesc(role: string, tab: string, stats: any, filteredAset: any[]): string {
+  if (role === "teknisi") {
+    if (tab === "dashboard") return "Work order dan tugas pemeliharaan saya";
+    if (tab === "pemeliharaan") return "Kelola work order yang ditugaskan";
+    if (tab === "aset") return "Informasi aset yang sedang diperbaiki";
+  }
+  if (role === "guru") {
+    if (tab === "dashboard") return "Laporkan kerusakan aset dan pantau status";
+    if (tab === "pemeliharaan") return "Buat laporan kerusakan atau permintaan service";
+  }
+  if (role === "kepala_sekolah") {
+    if (tab === "dashboard") return "Ringkasan kondisi aset dan pemeliharaan sekolah";
+    if (tab === "laporan") return "Rekap biaya, kondisi, dan performa pemeliharaan";
+  }
+  if (tab === "dashboard") return "Pantau kondisi aset, perbaikan, dan jadwal preventif sekolah dalam satu tempat";
+  if (tab === "aset") return `${filteredAset.length} aset • ${stats?.cards.perluPerbaikan||0} butuh perhatian`;
+  if (tab === "ruangan") return "Kelola 15 ruangan aktif di 5 gedung";
+  if (tab === "pemeliharaan") return "Kelola work order perbaikan dari guru dan staff";
+  if (tab === "jadwal") return "Jangan sampai terlewat service rutin";
+  if (tab === "laporan") return "Rekap biaya, kondisi, dan performa pemeliharaan";
+  return "";
+}
+
+function canEdit(role: string, tab: string): boolean {
+  if (role === "admin" || role === "sarpras") return true;
+  if (role === "teknisi" && tab === "pemeliharaan") return true;
+  if (role === "guru" && tab === "pemeliharaan") return true;
+  return false;
+}
+
+function canCreate(role: string, tab: string): boolean {
+  if (role === "admin" || role === "sarpras") return true;
+  if (role === "guru" && tab === "pemeliharaan") return true;
+  return false;
+}
+
+function canDelete(role: string): boolean {
+  return role === "admin" || role === "sarpras";
+}
+
+function canView(role: string, tab: string): boolean {
+  return getRoleNav(role).some(item => item.k === tab);
+}
+
 export default function Page(){
   const [user, setUser] = useState<User|null>(() => {
     if (typeof window !== "undefined") {
@@ -114,7 +207,16 @@ export default function Page(){
   }
 
   const fetchStats = async ()=>{
-    const r = await fetch("/api/dashboard/stats");
+    const params = new URLSearchParams();
+    if (user?.role === "teknisi") {
+      params.set("role", "teknisi");
+      params.set("userId", String(user.id));
+    } else if (user?.role === "guru") {
+      params.set("role", "guru");
+      params.set("nama", user.nama);
+    }
+    const qs = params.toString();
+    const r = await fetch(`/api/dashboard/stats${qs ? "?" + qs : ""}`);
     if(r.ok){
       const data = await r.json();
       setStats(data);
@@ -393,20 +495,12 @@ export default function Page(){
         <div className="p-4 flex-1 overflow-y-auto">
           <div className="text-[11px] font-bold tracking-widest text-zinc-400 uppercase px-3 mb-3">Menu Utama</div>
           <nav className="space-y-1.5">
-            {[
-              {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
-              {k:"aset", l:"Manajemen Aset", icon:"📦", count: asetList.length, desc:`${stats?.cards.perluPerbaikan||0} perlu perhatian`},
-              {k:"ruangan", l:"Ruangan & Lokasi", icon:"🏫", count: ruanganList.length, desc:"Kelola gedung & kelas"},
-              {k:"pemeliharaan", l:"Pemeliharaan", icon:"🔧", count: mtnList.filter(m=>["Diajukan","Disetujui","Dikerjakan"].includes(m.status)).length, desc:"Work order aktif"},
-              {k:"jadwal", l:"Jadwal Rutin", icon:"🗓️", count: jadwalList.length, desc:"Preventif"},
-              {k:"laporan", l:"Laporan", icon:"📊", desc:"Biaya & kondisi"},
-            ].map(item=>{
+            {getRoleNav(user?.role || "admin").map(item=>{
               const active = activeTab===item.k;
               return (
                 <button key={item.k} onClick={()=>{setActiveTab(item.k as any); setSidebarOpen(false);}} className={`w-full text-left px-3 py-3 rounded-2xl border transition flex items-center gap-3 group ${active? "bg-[#FF2D00] text-white border-[#FF2D00] shadow-lg shadow-red-200" : "bg-white border-transparent hover:border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}>
                   <div className={`w-9 h-9 rounded-xl grid place-items-center text-sm font-bold ${active? "bg-white text-[#FF2D00]" : "bg-zinc-100 text-zinc-600 group-hover:bg-white"}`}>{item.icon}</div>
                   <div className="flex-1 min-w-0"><div className={`text-sm font-semibold leading-none truncate ${active? "text-white":""}`}>{item.l}</div><div className={`text-[11px] mt-1 truncate ${active? "text-white/70":"text-zinc-400"}`}>{item.desc}</div></div>
-                  {item.count!==undefined && <div className={`text-[11px] font-bold px-2 py-1 rounded-full ${active? "bg-white text-[#FF2D00]":"bg-zinc-100 text-zinc-600"}`}>{item.count}</div>}
                 </button>
               );
             })}
@@ -435,27 +529,17 @@ export default function Page(){
         <header className="h-[64px] lg:h-[84px] bg-white/80 backdrop-blur border-b border-zinc-100 sticky top-0 z-20 px-4 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={()=>setSidebarOpen(true)} className="lg:hidden w-10 h-10 rounded-xl bg-zinc-900 text-white grid place-items-center">☰</button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg lg:text-xl font-bold brand-font">
-                  {activeTab==="dashboard" && "Dasbor Sarpras"}
-                  {activeTab==="aset" && "Manajemen Aset Sekolah"}
-                  {activeTab==="ruangan" && "Ruangan & Lokasi"}
-                  {activeTab==="pemeliharaan" && "Pemeliharaan & Perbaikan"}
-                  {activeTab==="jadwal" && "Jadwal Pemeliharaan Rutin"}
-                  {activeTab==="laporan" && "Laporan & Analitik"}
-                </h1>
-                {seeding && <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 animate-pulse">Menyiapkan data demo...</span>}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg lg:text-xl font-bold brand-font">
+                    {getHeaderTitle(user?.role || "admin", activeTab)}
+                  </h1>
+                  {seeding && <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 animate-pulse">Menyiapkan data demo...</span>}
+                </div>
+                <div className="text-xs text-zinc-500 hidden lg:block">
+                  {getHeaderDesc(user?.role || "admin", activeTab, stats, filteredAset)}
+                </div>
               </div>
-              <div className="text-xs text-zinc-500 hidden lg:block">
-                {activeTab==="dashboard" && "Pantau kondisi aset, perbaikan, dan jadwal preventif sekolah dalam satu tempat"}
-                {activeTab==="aset" && `${filteredAset.length} aset • ${stats?.cards.perluPerbaikan||0} butuh perhatian`}
-                {activeTab==="ruangan" && "Kelola 15 ruangan aktif di 5 gedung"}
-                {activeTab==="pemeliharaan" && "Kelola work order perbaikan dari guru dan staff"}
-                {activeTab==="jadwal" && "Jangan sampai terlewat service rutin"}
-                {activeTab==="laporan" && "Rekap biaya, kondisi, dan performa pemeliharaan"}
-              </div>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 text-xs bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-full"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"/> Sistem Aktif</div>
@@ -477,12 +561,22 @@ export default function Page(){
                 <div className="space-y-6">
                   {/* Stats Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
+                    {(user?.role==="teknisi"?[
+                      {l:"Total WO Saya", v:stats?.cards.totalPemeliharaan||0, sub:"Semua work order", icon:"🔧", color:"bg-blue-600", trend:"Ditugaskan"},
+                      {l:"Mendesak", v:stats?.cards.perluPerbaikan||0, sub:"Perlu tindakan segera", icon:"🚨", color:"bg-red-600", trend:"Prioritas tinggi"},
+                      {l:"Sedang Dikerjakan", v:stats?.cards.pemeliharaanAktif||0, sub:"Belum selesai", icon:"⚙️", color:"bg-orange-500", trend:"Aktif"},
+                      {l:"Selesai", v:mtnList.filter((m:any)=>m.status==="Selesai" && m.teknisiId===user?.id).length, sub:"Selesai dikerjakan", icon:"✅", color:"bg-emerald-600", trend:"Tuntas"},
+                    ]:user?.role==="guru"?[
+                      {l:"Laporan Saya", v:stats?.cards.totalPemeliharaan||0, sub:"Semua laporan", icon:"📝", color:"bg-blue-600", trend:"Diajukan"},
+                      {l:"Menunggu", v:mtnList.filter((m:any)=>m.pelapor===user?.nama && m.status==="Diajukan").length, sub:"Belum diproses", icon:"⏳", color:"bg-amber-500", trend:"Pending"},
+                      {l:"Disetujui/Dikerjakan", v:stats?.cards.pemeliharaanAktif||0, sub:"Sedang ditangani", icon:"🔧", color:"bg-orange-500", trend:"Proses"},
+                      {l:"Selesai", v:mtnList.filter((m:any)=>m.pelapor===user?.nama && m.status==="Selesai").length, sub:"Selesai diperbaiki", icon:"✅", color:"bg-emerald-600", trend:"Tuntas"},
+                    ]:[
                       {l:"Total Aset", v:stats?.cards.totalAset||0, sub:"Aktif di 15 ruangan", icon:"📦", color:"bg-[#FF2D00]", trend:"+12% bulan ini"},
                       {l:"Perlu Perbaikan", v:stats?.cards.perluPerbaikan||0, sub:"Prioritas tinggi", icon:"⚠️", color:"bg-amber-500", trend:"Butuh tindakan"},
                       {l:"Work Order Aktif", v:stats?.cards.pemeliharaanAktif||0, sub:`${stats?.cards.totalPemeliharaan||0} total laporan`, icon:"🔧", color:"bg-blue-600", trend:"3 mendesak"},
                       {l:"Biaya Bulan Ini", v:`Rp ${(Number(stats?.cards.biayaBulanan||0)/1000000).toFixed(1)}jt`, sub:"Pemeliharaan selesai", icon:"💰", color:"bg-emerald-600", trend:"-8% vs bulan lalu"},
-                    ].map(c=>
+                    ]).map(c=>
                       <div key={c.l} className="bg-white rounded-[20px] border border-zinc-100 p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:shadow-[0_8px_40px_rgba(0,0,0,0.08)] transition">
                         <div className="absolute right-0 top-0 w-24 h-24 bg-zinc-50 rounded-full -mr-8 -mt-8 group-hover:scale-110 transition"/>
                         <div className="relative flex justify-between items-start">
@@ -494,72 +588,143 @@ export default function Page(){
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-white rounded-[20px] border border-zinc-100 p-6">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-bold">Kondisi Aset</h3>
-                        <div className="text-xs text-zinc-500">Total {stats?.cards.totalAset} aset</div>
-                      </div>
-                      <div className="space-y-3">
-                        {(stats?.charts.byKondisi||[]).map((row:any)=>{
-                          const total = stats?.cards.totalAset||1;
-                          const pct = Math.round((Number(row.jumlah)/total)*100);
-                          return (
-                            <div key={row.kondisi} className="flex items-center gap-4">
-                              <div className="w-28 text-xs font-medium">{row.kondisi}</div>
-                              <div className="flex-1 h-3 bg-zinc-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${row.kondisi==="Baik"?"bg-emerald-500":row.kondisi==="Perlu Perbaikan"?"bg-amber-400":"bg-red-500"}`} style={{width:`${pct}%`}}/></div>
-                              <div className="w-10 text-xs font-bold text-right">{pct}%</div>
-                              <div className="w-8 text-xs text-zinc-500 text-right">{row.jumlah}</div>
+                  {(user?.role==="teknisi" || user?.role==="guru") ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2 bg-white rounded-[20px] border border-zinc-100 p-6">
+                        <h3 className="font-bold mb-4">{user?.role==="teknisi" ? "Work Order Saya" : "Laporan Saya"}</h3>
+                        <div className="space-y-2">
+                          {(stats?.recent.pemeliharaan||[]).map((m:any)=>(
+                            <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 grid place-items-center text-sm">🔧</div>
+                                <div>
+                                  <div className="text-sm font-semibold">{m.judul}</div>
+                                  <div className="text-[11px] text-zinc-500">{m.kode} • {m.pelapor} • {new Date(m.tanggalLapor||m.tanggal_lapor).toLocaleDateString("id-ID")}</div>
+                                </div>
+                              </div>
+                              <Badge tone={statusMtnTone(m.status)}>{m.status}</Badge>
                             </div>
-                          );
-                        })}
+                          ))}
+                          {(!stats?.recent.pemeliharaan || stats.recent.pemeliharaan.length===0) && <div className="text-sm text-zinc-500 py-6 text-center">Belum ada laporan</div>}
+                        </div>
                       </div>
-
-                      <div className="mt-8">
-                        <h4 className="font-bold text-sm mb-4">Aset per Kategori</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {(stats?.charts.byKategori||[]).map((r:any)=><div key={r.kategori} className="px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-100 text-xs"><span className="font-bold">{r.kategori}</span> <span className="text-zinc-500 ml-2">{r.jumlah} aset</span></div>)}
+                      <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
+                        <h3 className="font-bold mb-4">Status</h3>
+                        <div className="space-y-2.5">
+                          {(stats?.charts.byStatusPemeliharaan||[]).map((r:any)=>(
+                            <div key={r.status} className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 border border-zinc-100">
+                              <div className="flex items-center gap-2"><Badge tone={statusMtnTone(r.status)}>{r.status}</Badge></div>
+                              <div className="text-sm font-bold">{r.jumlah}</div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
-
-                    <div className="space-y-6">
-                      <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
-                        <h3 className="font-bold mb-4">Status Pemeliharaan</h3>
-                        <div className="space-y-2.5">
-                          {(stats?.charts.byStatusPemeliharaan||[]).map((r:any)=><div key={r.status} className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 border border-zinc-100"><div className="flex items-center gap-2"><Badge tone={statusMtnTone(r.status)}>{r.status}</Badge></div><div className="text-sm font-bold">{r.jumlah}</div></div>)}
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2 bg-white rounded-[20px] border border-zinc-100 p-6">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="font-bold">Kondisi Aset</h3>
+                          <div className="text-xs text-zinc-500">Total {stats?.cards.totalAset} aset</div>
                         </div>
-                        <button onClick={()=>setActiveTab("pemeliharaan")} className="mt-4 w-full h-10 rounded-xl bg-zinc-900 text-white text-sm font-semibold">Lihat Semua Laporan</button>
-                      </div>
-
-                      <div className="bg-[#1A1A1A] rounded-[20px] p-6 text-white relative overflow-hidden">
-                        <div className="absolute -right-10 -top-10 w-32 h-32 bg-[#FF2D00] rounded-full opacity-20"/>
-                        <h3 className="font-bold relative">Jadwal Mendatang</h3>
-                        <div className="mt-4 space-y-3 relative">
-                          {jadwalList.slice(0,3).map(j=>{
-                            const isSoon = new Date(j.tanggalSelanjutnya).getTime() - _now < 7*24*3600*1000;
-                            return <div key={j.id} className="flex gap-3"><div className={`w-10 h-10 rounded-xl grid place-items-center text-xs font-bold ${isSoon?"bg-[#FF2D00]":"bg-zinc-800"}`}>{new Date(j.tanggalSelanjutnya).getDate()}</div><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{j.judul}</div><div className="text-xs text-zinc-400 truncate">{new Date(j.tanggalSelanjutnya).toLocaleDateString("id-ID",{day:"numeric", month:"short"})} • {j.penanggungJawab}</div></div></div>;
+                        <div className="space-y-3">
+                          {(stats?.charts.byKondisi||[]).map((row:any)=>{
+                            const total = stats?.cards.totalAset||1;
+                            const pct = Math.round((Number(row.jumlah)/total)*100);
+                            return (
+                              <div key={row.kondisi} className="flex items-center gap-4">
+                                <div className="w-28 text-xs font-medium">{row.kondisi}</div>
+                                <div className="flex-1 h-3 bg-zinc-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${row.kondisi==="Baik"?"bg-emerald-500":row.kondisi==="Perlu Perbaikan"?"bg-amber-400":"bg-red-500"}`} style={{width:`${pct}%`}}/></div>
+                                <div className="w-10 text-xs font-bold text-right">{pct}%</div>
+                                <div className="w-8 text-xs text-zinc-500 text-right">{row.jumlah}</div>
+                              </div>
+                            );
                           })}
                         </div>
+
+                        <div className="mt-8">
+                          <h4 className="font-bold text-sm mb-4">Aset per Kategori</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {(stats?.charts.byKategori||[]).map((r:any)=>(
+                              <div key={r.kategori} className="px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-100 text-xs">
+                                <span className="font-bold">{r.kategori}</span> <span className="text-zinc-500 ml-2">{r.jumlah} aset</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
+                          <h3 className="font-bold mb-4">Status Pemeliharaan</h3>
+                          <div className="space-y-2.5">
+                            {(stats?.charts.byStatusPemeliharaan||[]).map((r:any)=>(
+                              <div key={r.status} className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 border border-zinc-100">
+                                <div className="flex items-center gap-2"><Badge tone={statusMtnTone(r.status)}>{r.status}</Badge></div>
+                                <div className="text-sm font-bold">{r.jumlah}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <button onClick={()=>setActiveTab("pemeliharaan")} className="mt-4 w-full h-10 rounded-xl bg-zinc-900 text-white text-sm font-semibold">Lihat Semua Laporan</button>
+                        </div>
+
+                        <div className="bg-[#1A1A1A] rounded-[20px] p-6 text-white relative overflow-hidden">
+                          <div className="absolute -right-10 -top-10 w-32 h-32 bg-[#FF2D00] rounded-full opacity-20"/>
+                          <h3 className="font-bold relative">Jadwal Mendatang</h3>
+                          <div className="mt-4 space-y-3 relative">
+                            {jadwalList.slice(0,3).map(j=>{
+                              const isSoon = new Date(j.tanggalSelanjutnya).getTime() - _now < 7*24*3600*1000;
+                              return <div key={j.id} className="flex gap-3"><div className={`w-10 h-10 rounded-xl grid place-items-center text-xs font-bold ${isSoon?"bg-[#FF2D00]":"bg-zinc-800"}`}>{new Date(j.tanggalSelanjutnya).getDate()}</div><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{j.judul}</div><div className="text-xs text-zinc-400 truncate">{new Date(j.tanggalSelanjutnya).toLocaleDateString("id-ID",{day:"numeric", month:"short"})} • {j.penanggungJawab}</div></div></div>;
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
-                      <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Aset Perlu Perhatian</h3><button onClick={()=>setActiveTab("aset")} className="text-xs text-[#FF2D00] font-semibold">Lihat semua →</button></div>
-                      <div className="space-y-3">
-                        {(stats?.recent.asetRusak||[]).map((a:any)=><div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 grid place-items-center">⚠️</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{a.nama}</div><div className="text-xs text-zinc-500 truncate">{a.kode_aset||a.kodeAset} • {a.kondisi}</div></div><Badge tone={kondisiTone(a.kondisi)}>{a.kondisi}</Badge></div>)}
-                        {(!stats?.recent.asetRusak || stats.recent.asetRusak.length===0) && <div className="text-sm text-zinc-500 py-8 text-center">Semua aset dalam kondisi baik 🎉</div>}
+                    {(user?.role==="teknisi") ? (
+                      <>
+                        <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
+                          <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Aset yang Saya Tangani</h3><button onClick={()=>setActiveTab("aset")} className="text-xs text-[#FF2D00] font-semibold">Lihat semua →</button></div>
+                          <div className="space-y-3">
+                            {(stats?.recent.asetRusak||[]).map((a:any)=><div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 grid place-items-center">⚠️</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{a.nama}</div><div className="text-xs text-zinc-500 truncate">{a.kode_aset||a.kodeAset} • {a.kondisi}</div></div><Badge tone={kondisiTone(a.kondisi)}>{a.kondisi}</Badge></div>)}
+                            {(!stats?.recent.asetRusak || stats.recent.asetRusak.length===0) && <div className="text-sm text-zinc-500 py-8 text-center">Tidak ada aset dalam perbaikan 🎉</div>}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
+                          <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Work Order Saya</h3><button onClick={()=>setActiveTab("pemeliharaan")} className="text-xs text-[#FF2D00] font-semibold">Kelola →</button></div>
+                          <div className="space-y-3">
+                            {(stats?.recent.pemeliharaan||[]).map((m:any)=><div key={m.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">🔧</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{m.judul}</div><div className="text-xs text-zinc-500 truncate">{m.kode} • {m.pelapor} • {new Date(m.tanggalLapor||m.tanggal_lapor).toLocaleDateString("id-ID")}</div></div><Badge tone={statusMtnTone(m.status)}>{m.status}</Badge></div>)}
+                          </div>
+                        </div>
+                      </>
+                    ) : user?.role==="guru" ? (
+                      <div className="lg:col-span-2 bg-white rounded-[20px] border border-zinc-100 p-6">
+                        <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Laporan Saya</h3><button onClick={()=>setActiveTab("pemeliharaan")} className="text-xs text-[#FF2D00] font-semibold">Buat Laporan Baru →</button></div>
+                        <div className="space-y-3">
+                          {(stats?.recent.pemeliharaan||[]).map((m:any)=><div key={m.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">📝</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{m.judul}</div><div className="text-xs text-zinc-500 truncate">{m.kode} • {new Date(m.tanggalLapor||m.tanggal_lapor).toLocaleDateString("id-ID")}</div></div><Badge tone={statusMtnTone(m.status)}>{m.status}</Badge></div>)}
+                          {(!stats?.recent.pemeliharaan || stats.recent.pemeliharaan.length===0) && <div className="text-sm text-zinc-500 py-8 text-center">Belum ada laporan. Buat laporan pertama Anda!</div>}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
+                          <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Aset Perlu Perhatian</h3><button onClick={()=>setActiveTab("aset")} className="text-xs text-[#FF2D00] font-semibold">Lihat semua →</button></div>
+                          <div className="space-y-3">
+                            {(stats?.recent.asetRusak||[]).map((a:any)=><div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 grid place-items-center">⚠️</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{a.nama}</div><div className="text-xs text-zinc-500 truncate">{a.kode_aset||a.kodeAset} • {a.kondisi}</div></div><Badge tone={kondisiTone(a.kondisi)}>{a.kondisi}</Badge></div>)}
+                            {(!stats?.recent.asetRusak || stats.recent.asetRusak.length===0) && <div className="text-sm text-zinc-500 py-8 text-center">Semua aset dalam kondisi baik 🎉</div>}
+                          </div>
+                        </div>
 
-                    <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
-                      <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Laporan Terbaru</h3><button onClick={()=>setActiveTab("pemeliharaan")} className="text-xs text-[#FF2D00] font-semibold">Kelola →</button></div>
-                      <div className="space-y-3">
-                        {(stats?.recent.pemeliharaan||[]).map((m:any)=><div key={m.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">🔧</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{m.judul}</div><div className="text-xs text-zinc-500 truncate">{m.kode} • {m.pelapor} • {new Date(m.tanggalLapor||m.tanggal_lapor).toLocaleDateString("id-ID")}</div></div><Badge tone={statusMtnTone(m.status)}>{m.status}</Badge></div>)}
-                      </div>
-                    </div>
+                        <div className="bg-white rounded-[20px] border border-zinc-100 p-6">
+                          <div className="flex items-center justify-between mb-4"><h3 className="font-bold">Laporan Terbaru</h3><button onClick={()=>setActiveTab("pemeliharaan")} className="text-xs text-[#FF2D00] font-semibold">Kelola →</button></div>
+                          <div className="space-y-3">
+                            {(stats?.recent.pemeliharaan||[]).map((m:any)=><div key={m.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 hover:bg-zinc-50"><div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">🔧</div><div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{m.judul}</div><div className="text-xs text-zinc-500 truncate">{m.kode} • {m.pelapor} • {new Date(m.tanggalLapor||m.tanggal_lapor).toLocaleDateString("id-ID")}</div></div><Badge tone={statusMtnTone(m.status)}>{m.status}</Badge></div>)}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -572,14 +737,14 @@ export default function Page(){
                       <select value={fKategori} onChange={e=>setFKategori(e.target.value)} className="h-11 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-sm"><option value="">Semua Kategori</option>{KATEGORI.map(k=><option key={k} value={k}>{k}</option>)}</select>
                       <select value={fKondisi} onChange={e=>setFKondisi(e.target.value)} className="h-11 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-sm"><option value="">Semua Kondisi</option>{KONDISI.map(k=><option key={k} value={k}>{k}</option>)}</select>
                     </div>
-                    <div className="flex gap-2 w-full lg:w-auto">
-                      <div className="flex rounded-xl border border-zinc-200 overflow-hidden"><button onClick={()=>setViewMode("grid")} className={`px-3 h-11 text-sm ${viewMode==="grid"?"bg-zinc-900 text-white":"bg-white"}`}>⊞</button><button onClick={()=>setViewMode("table")} className={`px-3 h-11 text-sm ${viewMode==="table"?"bg-zinc-900 text-white":"bg-white"}`}>☰</button></div>
-                      <button onClick={openAddAset} className="flex-1 lg:flex-none h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Aset</button>
-                    </div>
+                      <div className="flex gap-2 w-full lg:w-auto">
+                        <div className="flex rounded-xl border border-zinc-200 overflow-hidden"><button onClick={()=>setViewMode("grid")} className={`px-3 h-11 text-sm ${viewMode==="grid"?"bg-zinc-900 text-white":"bg-white"}`}>⊞</button><button onClick={()=>setViewMode("table")} className={`px-3 h-11 text-sm ${viewMode==="table"?"bg-zinc-900 text-white":"bg-white"}`}>☰</button></div>
+                        {canCreate(user?.role||"admin","aset") && <button onClick={openAddAset} className="flex-1 lg:flex-none h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Aset</button>}
+                      </div>
                   </div>
 
                   {filteredAset.length===0 ? (
-                    <div className="bg-white rounded-[24px] border border-dashed border-zinc-200 p-16 text-center"><div className="w-16 h-16 mx-auto bg-zinc-50 rounded-2xl grid place-items-center text-2xl">📭</div><div className="mt-4 font-bold">Tidak ada aset ditemukan</div><div className="text-sm text-zinc-500 mt-1 max-w-sm mx-auto">Coba ubah filter pencarian atau tambah aset baru untuk mulai mengelola inventaris sekolah.</div><button onClick={openAddAset} className="mt-6 h-10 px-5 rounded-xl bg-zinc-900 text-white text-sm font-semibold">Tambah Aset Pertama</button></div>
+                    <div className="bg-white rounded-[24px] border border-dashed border-zinc-200 p-16 text-center"><div className="w-16 h-16 mx-auto bg-zinc-50 rounded-2xl grid place-items-center text-2xl">📭</div><div className="mt-4 font-bold">Tidak ada aset ditemukan</div><div className="text-sm text-zinc-500 mt-1 max-w-sm mx-auto">Coba ubah filter pencarian atau tambah aset baru untuk mulai mengelola inventaris sekolah.</div>{canCreate(user?.role||"admin","aset") && <button onClick={openAddAset} className="mt-6 h-10 px-5 rounded-xl bg-zinc-900 text-white text-sm font-semibold">Tambah Aset Pertama</button>}</div>
                   ): viewMode==="grid" ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {filteredAset.map(a=>{
@@ -593,10 +758,10 @@ export default function Page(){
                               <div className="flex justify-between"><span className="text-zinc-400">PJ</span><span className="font-medium truncate max-w-[120px]">{a.penanggungJawab||"-"}</span></div>
                               {a.harga && Number(a.harga)>0 && <div className="flex justify-between"><span className="text-zinc-400">Nilai</span><span className="font-bold">Rp {Number(a.harga).toLocaleString("id-ID")}</span></div>}
                             </div>
-                            <div className="mt-5 flex gap-2">
-                              <button onClick={()=>openEditAset(a)} className="flex-1 h-9 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-black">Edit</button>
-                              <button onClick={()=>deleteAset(a.id)} className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 grid place-items-center hover:bg-red-50 hover:border-red-200 hover:text-red-600">🗑️</button>
-                            </div>
+                              <div className="mt-5 flex gap-2">
+                                {canEdit(user?.role||"admin","aset") && <button onClick={()=>openEditAset(a)} className="flex-1 h-9 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-black">Edit</button>}
+                                {canDelete(user?.role||"admin") && <button onClick={()=>deleteAset(a.id)} className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 grid place-items-center hover:bg-red-50 hover:border-red-200 hover:text-red-600">🗑️</button>}
+                              </div>
                           </div>
                         );
                       })}
@@ -606,7 +771,7 @@ export default function Page(){
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead className="bg-zinc-50 text-[11px] tracking-widest uppercase text-zinc-500"><tr><th className="text-left px-4 py-3 font-semibold">Aset</th><th className="text-left px-4 py-3 font-semibold">Lokasi</th><th className="text-left px-4 py-3 font-semibold">Kondisi</th><th className="text-left px-4 py-3 font-semibold">Status</th><th className="text-right px-4 py-3 font-semibold">Aksi</th></tr></thead>
-                          <tbody>{filteredAset.map(a=><tr key={a.id} className="border-t border-zinc-100 hover:bg-zinc-50"><td className="px-4 py-3"><div className="font-semibold">{a.nama}</div><div className="text-xs text-zinc-500 font-mono">{a.kodeAset} • {a.kategori}</div></td><td className="px-4 py-3 text-xs">{a.ruanganId? ruanganById[a.ruanganId]?.nama : "-"} </td><td className="px-4 py-3"><Badge tone={kondisiTone(a.kondisi)}>{a.kondisi}</Badge></td><td className="px-4 py-3"><Badge>{a.status}</Badge></td><td className="px-4 py-3 text-right flex justify-end gap-1"><button onClick={()=>openEditAset(a)} className="px-3 py-1 rounded-full bg-zinc-900 text-white text-xs">Edit</button><button onClick={()=>deleteAset(a.id)} className="px-2 py-1 rounded-full bg-zinc-100 text-xs">Hapus</button></td></tr>)}</tbody>
+                          <tbody>{filteredAset.map(a=><tr key={a.id} className="border-t border-zinc-100 hover:bg-zinc-50"><td className="px-4 py-3"><div className="font-semibold">{a.nama}</div><div className="text-xs text-zinc-500 font-mono">{a.kodeAset} • {a.kategori}</div></td><td className="px-4 py-3 text-xs">{a.ruanganId? ruanganById[a.ruanganId]?.nama : "-"} </td><td className="px-4 py-3"><Badge tone={kondisiTone(a.kondisi)}>{a.kondisi}</Badge></td><td className="px-4 py-3"><Badge>{a.status}</Badge></td><td className="px-4 py-3 text-right flex justify-end gap-1">{canEdit(user?.role||"admin","aset") && <button onClick={()=>openEditAset(a)} className="px-3 py-1 rounded-full bg-zinc-900 text-white text-xs">Edit</button>}{canDelete(user?.role||"admin") && <button onClick={()=>deleteAset(a.id)} className="px-2 py-1 rounded-full bg-zinc-100 text-xs">Hapus</button>}</td></tr>)}</tbody>
                         </table>
                       </div>
                     </div>
@@ -618,7 +783,7 @@ export default function Page(){
                 <div className="space-y-4">
                   <div className="flex flex-col lg:flex-row gap-3 justify-between">
                     <div className="flex-1 relative max-w-lg"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">🔍</span><input value={qRuangan} onChange={e=>setQRuangan(e.target.value)} placeholder="Cari ruangan, kode, gedung..." className="w-full h-11 pl-10 pr-4 rounded-xl bg-white border border-zinc-200"/></div>
-                    <button onClick={openAddRuangan} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Ruangan</button>
+                    {canCreate(user?.role||"admin","ruangan") && <button onClick={openAddRuangan} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Ruangan</button>}
                   </div>
 
                   {filteredRuangan.length===0 ? <div className="bg-white rounded-2xl border border-dashed p-12 text-center text-zinc-500">Belum ada ruangan. Tambahkan gedung dan kelas.</div> :
@@ -638,7 +803,7 @@ export default function Page(){
                             <div className="p-2 rounded-xl bg-zinc-50"><div className="text-sm font-bold">{r.tipe}</div><div className="text-[10px] text-zinc-500">Tipe</div></div>
                           </div>
                           <div className="mt-3 text-xs text-zinc-500">PJ: {r.penanggungJawab||"-"}</div>
-                          <div className="mt-4 flex gap-2"><button onClick={()=>openEditRuangan(r)} className="flex-1 h-9 rounded-xl bg-zinc-900 text-white text-xs font-semibold">Edit</button><button onClick={()=>deleteRuangan(r.id)} className="w-9 h-9 rounded-xl bg-zinc-50 border grid place-items-center">🗑️</button></div>
+                          <div className="mt-4 flex gap-2">{canEdit(user?.role||"admin","ruangan") && <button onClick={()=>openEditRuangan(r)} className="flex-1 h-9 rounded-xl bg-zinc-900 text-white text-xs font-semibold">Edit</button>}{canDelete(user?.role||"admin") && <button onClick={()=>deleteRuangan(r.id)} className="w-9 h-9 rounded-xl bg-zinc-50 border grid place-items-center">🗑️</button>}</div>
                         </div>
                       );
                     })}
@@ -653,9 +818,9 @@ export default function Page(){
                     <div className="flex flex-1 gap-2">
                       <div className="flex-1 relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">🔍</span><input value={qMtn} onChange={e=>setQMtn(e.target.value)} placeholder="Cari judul, kode, pelapor..." className="w-full h-11 pl-10 pr-4 rounded-xl bg-zinc-50 border border-zinc-200"/></div>
                       <select value={fStatusMtn} onChange={e=>setFStatusMtn(e.target.value)} className="h-11 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-sm"><option value="">Semua Status</option>{STATUS_MTN.map(s=><option key={s} value={s}>{s}</option>)}</select>
-                    </div>
-                    <button onClick={openAddMtn} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Buat Laporan</button>
-                  </div>
+                     </div>
+                     {canCreate(user?.role||"admin","pemeliharaan") && <button onClick={openAddMtn} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Buat Laporan</button>}
+                   </div>
 
                   {filteredMtn.length===0 ? (
                     <div className="bg-white rounded-2xl border border-dashed p-12 text-center"><div className="text-3xl">🔧</div><div className="font-bold mt-3">Belum ada laporan pemeliharaan</div><div className="text-sm text-zinc-500 mt-1">Laporan kerusakan dari guru dan staff akan muncul di sini.</div></div>
@@ -689,7 +854,7 @@ export default function Page(){
                     <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
                       <div className="p-4 font-bold border-b border-zinc-100">Daftar Lengkap</div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm"><thead className="bg-zinc-50 text-[11px] uppercase tracking-widest text-zinc-500"><tr><th className="text-left px-4 py-3">Laporan</th><th className="text-left px-4 py-3">Aset</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Teknisi</th><th className="text-right px-4 py-3">Aksi</th></tr></thead><tbody>{filteredMtn.map(m=><tr key={m.id} className="border-t border-zinc-100 hover:bg-zinc-50"><td className="px-4 py-3"><div className="font-semibold">{m.judul}</div><div className="text-xs text-zinc-500">{m.kode} • {m.jenis} • {m.prioritas}</div></td><td className="px-4 py-3 text-xs">{m.asetId? asetById[m.asetId]?.nama : "-"}</td><td className="px-4 py-3"><Badge tone={statusMtnTone(m.status)}>{m.status}</Badge></td><td className="px-4 py-3 text-xs">{m.teknisiId? usersList.find(u=>u.id===m.teknisiId)?.nama : "-"}</td><td className="px-4 py-3 text-right"><button onClick={()=>openEditMtn(m)} className="text-xs px-3 py-1 rounded-full bg-zinc-900 text-white">Kelola</button> <button onClick={()=>deleteMtn(m.id)} className="text-xs px-2 py-1 rounded-full bg-zinc-100">Hapus</button></td></tr>)}</tbody></table>
+                          <table className="w-full text-sm"><thead className="bg-zinc-50 text-[11px] uppercase tracking-widest text-zinc-500"><tr><th className="text-left px-4 py-3">Laporan</th><th className="text-left px-4 py-3">Aset</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Teknisi</th><th className="text-right px-4 py-3">Aksi</th></tr></thead><tbody>{filteredMtn.map(m=><tr key={m.id} className="border-t border-zinc-100 hover:bg-zinc-50"><td className="px-4 py-3"><div className="font-semibold">{m.judul}</div><div className="text-xs text-zinc-500">{m.kode} • {m.jenis} • {m.prioritas}</div></td><td className="px-4 py-3 text-xs">{m.asetId? asetById[m.asetId]?.nama : "-"}</td><td className="px-4 py-3"><Badge tone={statusMtnTone(m.status)}>{m.status}</Badge></td><td className="px-4 py-3 text-xs">{m.teknisiId? usersList.find(u=>u.id===m.teknisiId)?.nama : "-"}</td><td className="px-4 py-3 text-right">{canEdit(user?.role||"admin","pemeliharaan") && <button onClick={()=>openEditMtn(m)} className="text-xs px-3 py-1 rounded-full bg-zinc-900 text-white">Kelola</button>} {canDelete(user?.role||"admin") && <button onClick={()=>deleteMtn(m.id)} className="text-xs px-2 py-1 rounded-full bg-zinc-100">Hapus</button>}</td></tr>)}</tbody></table>
                       </div>
                     </div>
                     </>
@@ -701,7 +866,7 @@ export default function Page(){
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div><h2 className="font-bold text-lg">Jadwal Pemeliharaan Preventif</h2><p className="text-xs text-zinc-500">Jadwal rutin agar aset tetap prima dan tahan lama</p></div>
-                    <button onClick={openAddJadwal} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Jadwal</button>
+                    {canCreate(user?.role||"admin","jadwal") && <button onClick={openAddJadwal} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Jadwal</button>}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -718,7 +883,7 @@ export default function Page(){
                           <div className="text-xs text-zinc-500 mt-1">📅 {new Date(j.tanggalSelanjutnya).toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"})}</div>
                           <div className="text-xs text-zinc-500 mt-1">👤 {j.penanggungJawab||"-"}</div>
                           {j.deskripsi && <div className="text-xs text-zinc-600 mt-3 p-2 bg-zinc-50 rounded-xl border border-zinc-100">{j.deskripsi}</div>}
-                          <div className="mt-4 flex gap-2"><button onClick={()=>openEditJadwal(j)} className="flex-1 h-8 rounded-xl bg-zinc-900 text-white text-xs font-semibold">Edit</button><button onClick={()=>deleteJadwal(j.id)} className="w-8 h-8 rounded-xl bg-zinc-50 border grid place-items-center text-xs">🗑️</button></div>
+                          <div className="mt-4 flex gap-2">{canEdit(user?.role||"admin","jadwal") && <button onClick={()=>openEditJadwal(j)} className="flex-1 h-8 rounded-xl bg-zinc-900 text-white text-xs font-semibold">Edit</button>}{canDelete(user?.role||"admin") && <button onClick={()=>deleteJadwal(j.id)} className="w-8 h-8 rounded-xl bg-zinc-50 border grid place-items-center text-xs">🗑️</button>}</div>
                         </div>
                       );
                     })}
