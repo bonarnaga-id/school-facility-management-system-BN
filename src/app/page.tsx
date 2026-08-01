@@ -418,7 +418,7 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   };
 
   // User Management
-  const openAddUser = ()=>{ setEditingUser(null); setUserForm({role:"guru", status:"aktif"}); setShowUserModal(true); };
+  const openAddUser = ()=>{ console.log("[USER] openAddUser called"); setEditingUser(null); setUserForm({role:"guru", status:"aktif"}); setShowUserModal(true); };
   const openEditUser = (u:any)=>{ setEditingUser(u); setUserForm({...u}); setShowUserModal(true); };
   const saveUser = async ()=>{
     if(!userForm.username || !userForm.nama) return showToast("Username dan nama wajib diisi", "error");
@@ -468,6 +468,10 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
       router.replace(`/${userRole}/dashboard`);
     }
   }, [initialRole, userRole, user, router]);
+
+  useEffect(() => {
+    console.log("[USER] showUserModal changed:", showUserModal);
+  }, [showUserModal]);
 
   if(authLoading){
     console.log("[APP] authLoading=true, showing splash");

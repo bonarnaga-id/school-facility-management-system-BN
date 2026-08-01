@@ -37,6 +37,7 @@ export default function LoginPage() {
         return;
       }
       localStorage.setItem("yb_user", JSON.stringify(data.user));
+      localStorage.setItem("yb_token", data.token); // <-- tambahkan baris ini
       const role = data.user.role === "kepala_sekolah" ? "kepsek" : data.user.role;
       router.replace(`/${role}/dashboard`);
     } catch {

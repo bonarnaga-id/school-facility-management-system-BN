@@ -1,5 +1,2 @@
-{"timestamp":"05:23:15.827","source":"Server","level":"LOG","message":"✓ Compiled in 15283s"}
-{"timestamp":"00:00:11.938","source":"Server","level":"LOG","message":""}
-{"timestamp":"00:00:17.425","source":"Server","level":"LOG","message":"○ Compiling / ..."}
-{"timestamp":"00:00:22.949","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
-{"timestamp":"00:02:38.524","source":"Server","level":"ERROR","message":"Error: Failed query: select \"id\", \"username\", \"password_hash\", \"nama\", \"email\", \"role\", \"status\", \"jabatan\", \"token\", \"created_at\" from \"users\" where (\"users\".\"username\" = $1 or \"users\".\"email\" = $2)\nparams: admin@yaabunayya.sch.id,admin@yaabunayya.sch.id"}
+{"timestamp":"00:00:01.582","source":"Server","level":"WARN","message":"⚠ Slow filesystem detected. The benchmark took 317ms. If C:\\Users\\ABI UMMI\\Documents\\GitHub\\school-facility-management-system-BN\\.next/dev is a network drive, consider moving it to a local folder.\nSee more: https://nextjs.org/docs/app/guides/local-development"}
+{"timestamp":"00:00:01.898","source":"Server","level":"LOG","message":""}
