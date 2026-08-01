@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --brand-red: #FF2D00;
+  --brand-yellow: #FFD60A;
+  --brand-dark: #1A1A1A;
+}
+
+* {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+}
+h1,h2,h3,.brand-font {
+  font-family: "Lexend", sans-serif;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFE0D0;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
