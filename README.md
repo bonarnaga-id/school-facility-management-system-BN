@@ -327,7 +327,7 @@ Login pengguna.
   "user": {
     "id": 1,
     "username": "admin",
-    "nama": "Ustadz Ahmad Fauzi",
+    "nama": "Gue di Perpustakaan",
     "role": "admin",
     "jabatan": "Kepala Sarpras"
   }
