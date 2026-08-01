@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
 
 type User = { id: number; username: string; nama: string; role: string; jabatan?: string; email?: string };
 type Ruangan = { id: number; kode: string; nama: string; gedung: string; lantai: number; kapasitas: number; tipe: string; penanggungJawab?: string; status: string };
@@ -135,21 +134,28 @@ export default function Page(){
 
   useEffect(()=>{
     if(!user) return;
+    console.log("[APP] user loaded, fetching data:", user.username);
     setTimeout(() => loadAll());
     // loadAll is a stable function declaration; adding it to deps would trigger unnecessary reruns.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[user]);
 
+  useEffect(()=>{
+    if(user) console.log("[APP] user state changed:", user?.username);
+  },[user]);
+
   const handleLogin = async (e?:any)=>{
     e?.preventDefault();
+    console.log("[LOGIN] attempt", loginForm);
     setLoginBusy(true); setLoginError("");
     try{
       const r = await fetch("/api/auth/login",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(loginForm)});
       const data = await r.json();
+      console.log("[LOGIN] response", r.status, data);
       if(!r.ok) throw new Error(data.error||"Gagal login");
       setUser(data.user);
       localStorage.setItem("yb_user", JSON.stringify(data.user));
-    }catch(err:any){ setLoginError(err.message); }
+    }catch(err:any){ console.error("[LOGIN] error", err); setLoginError(err.message); }
     finally{ setLoginBusy(false); }
   };
 
@@ -292,10 +298,12 @@ export default function Page(){
   const asetById = useMemo(()=>{ const m:any={}; asetList.forEach(a=>m[a.id]=a); return m; },[asetList]);
 
   if(authLoading){
-    return <div className="min-h-screen grid place-items-center bg-[#FFFBF5]"><div className="animate-pulse flex flex-col items-center gap-4"><Image src="/logo.svg" alt="logo" width={96} height={96} className="w-24 h-24 object-contain"/><div className="h-2 w-24 bg-orange-100 rounded-full overflow-hidden"><div className="h-full bg-[#FF2D00] animate-[shimmer_1s_infinite] w-1/2"/></div></div></div>;
+    console.log("[APP] authLoading=true, showing splash");
+    return <div className="min-h-screen grid place-items-center bg-[#FFFBF5]"><div className="animate-pulse flex flex-col items-center gap-4"><img src="/logo.svg" alt="logo" className="w-24 h-24 object-contain"/><div className="h-2 w-24 bg-orange-100 rounded-full overflow-hidden"><div className="h-full bg-[#FF2D00] animate-[shimmer_1s_infinite] w-1/2"/></div></div></div>;
   }
 
   if(!user){
+    console.log("[APP] user is null, showing login page");
     return (
       <div className="min-h-screen flex bg-[#FFFBF5]">
         <div className="flex-1 hidden lg:flex flex-col justify-between p-12 bg-[#FF2D00] text-white relative overflow-hidden">
@@ -303,7 +311,7 @@ export default function Page(){
           <div className="absolute -left-40 -bottom-40 w-[500px] h-[500px] bg-white rounded-full opacity-10"/>
           <div className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl grid place-items-center"><Image src="/logo.svg" alt="logo" width={40} height={40} className="w-10 h-10 object-contain"/></div>
+              <div className="w-12 h-12 bg-white rounded-xl grid place-items-center"><img src="/logo.svg" className="w-10 h-10 object-contain" alt="logo"/></div>
               <div><div className="font-bold leading-none">YAA BUNAYYA</div><div className="text-xs opacity-80">Islamic School</div></div>
             </div>
           </div>
@@ -323,7 +331,7 @@ export default function Page(){
         <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
           <div className="w-full max-w-[420px]">
             <div className="lg:hidden flex items-center gap-3 mb-8">
-              <Image src="/logo.svg" alt="logo" width={56} height={56} className="w-14 h-14 object-contain bg-white rounded-2xl p-1 shadow"/>
+              <img src="/logo.svg" alt="logo" className="w-14 h-14 object-contain bg-white rounded-2xl p-1 shadow"/>
               <div><div className="font-bold text-[#FF2D00]">YAA BUNAYYA</div><div className="text-xs text-zinc-500">TK-SD-SMP ISLAM</div></div>
             </div>
             <div className="bg-white rounded-[28px] shadow-[0_20px_80px_rgba(0,0,0,0.08)] border border-zinc-100 p-8">
@@ -334,7 +342,7 @@ export default function Page(){
                 <div><label className="text-xs font-semibold text-zinc-600">Username</label><input value={loginForm.username} onChange={e=>setLoginForm({...loginForm, username:e.target.value})} className="mt-1 w-full h-12 px-4 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#FF2D00]/20 focus:border-[#FF2D00] bg-zinc-50" placeholder="admin"/></div>
                 <div><label className="text-xs font-semibold text-zinc-600">Password</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm({...loginForm, password:e.target.value})} className="mt-1 w-full h-12 px-4 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#FF2D00]/20 focus:border-[#FF2D00] bg-zinc-50" placeholder="••••••••"/></div>
                 {loginError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-3">{loginError}</div>}
-                <button disabled={loginBusy} className="w-full h-12 rounded-xl bg-[#FF2D00] text-white font-semibold hover:bg-[#E62600] transition disabled:opacity-60 flex items-center justify-center gap-2">
+                 <button type="submit" disabled={loginBusy} className="w-full h-12 rounded-xl bg-[#FF2D00] text-white font-semibold hover:bg-[#E62600] transition disabled:opacity-60 flex items-center justify-center gap-2">
                   {loginBusy ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/> : null}
                   Masuk
                 </button>
@@ -367,12 +375,13 @@ export default function Page(){
     );
   }
 
+  console.log("[APP] Rendering main app, user:", user?.username, "role:", user?.role);
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-[300px] bg-white border-r border-zinc-100 shadow-[0_0_50px_rgba(0,0,0,0.04)] flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen? "translate-x-0":"-translate-x-full"}`}>
         <div className="h-[84px] px-6 flex items-center gap-3 border-b border-zinc-100">
-          <Image src="/logo.svg" alt="logo" width={48} height={48} className="w-12 h-12 object-contain bg-white rounded-xl shadow-sm border border-zinc-100 p-1"/>
+          <img src="/logo.svg" alt="logo" className="w-12 h-12 object-contain bg-white rounded-xl shadow-sm border border-zinc-100 p-1"/>
           <div className="flex-1 min-w-0">
             <div className="font-bold text-[15px] leading-none text-[#FF2D00] brand-font">YAA BUNAYYA</div>
             <div className="text-[10px] tracking-widest font-bold text-zinc-500 mt-1">ISLAMIC SCHOOL</div>
