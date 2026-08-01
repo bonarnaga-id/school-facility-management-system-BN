@@ -12,10 +12,11 @@ const PROTECTED_PATHS = [
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  // Protect admin API routes
+  // Protect admin API routes - check Authorization header OR auth_token cookie
   if (path.startsWith("/api/admin")) {
     const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const authCookie = request.cookies.get("auth_token")?.value;
+    if (!authHeader && !authCookie) {
       return NextResponse.json({ error: "Akses ditolak. Token tidak valid." }, { status: 403 });
     }
   }

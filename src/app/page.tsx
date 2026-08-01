@@ -263,9 +263,17 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   const fetchJadwal = async ()=>{ const r=await fetch("/api/jadwal"); if(r.ok) setJadwalList(await r.json()); };
   const fetchUsers = async ()=>{
     const headers: any = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const authToken = token || (typeof window !== "undefined" ? localStorage.getItem("yb_token") : null);
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+    console.log("[API] fetchUsers, token present:", !!authToken);
     const r = await fetch("/api/admin/users", { headers });
-    if (r.ok) setUsersList(await r.json());
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      console.error("[API] fetchUsers failed:", r.status, data);
+      if (r.status === 403) showToast("Akses ditolak. Silakan login kembali.", "error");
+      return;
+    }
+    setUsersList(await r.json());
   };
 
   useEffect(()=>{
