@@ -1,6 +1,10 @@
 {
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
+  "/admin/dashboard/page": "/admin/dashboard",
+  "/api/admin/users/[id]/route": "/api/admin/users/[id]",
+  "/api/admin/users/[id]/status/route": "/api/admin/users/[id]/status",
+  "/api/admin/users/route": "/api/admin/users",
   "/api/aset/[id]/route": "/api/aset/[id]",
   "/api/aset/route": "/api/aset",
   "/api/auth/login/route": "/api/auth/login",
@@ -14,5 +18,10 @@
   "/api/ruangan/route": "/api/ruangan",
   "/api/seed/route": "/api/seed",
   "/api/users/route": "/api/users",
-  "/page": "/"
+  "/guru/dashboard/page": "/guru/dashboard",
+  "/kepsek/dashboard/page": "/kepsek/dashboard",
+  "/login/page": "/login",
+  "/page": "/",
+  "/sarpras/dashboard/page": "/sarpras/dashboard",
+  "/teknisi/dashboard/page": "/teknisi/dashboard"
 }

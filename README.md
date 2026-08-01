@@ -18,9 +18,11 @@
 9. [Jalankan Aplikasi](#jalankan-aplikasi)
 10. [Build & Deploy ke Vercel](#build--deploy-ke-vercel)
 11. [Akun Demo](#akun-demo)
-12. [Dokumentasi API](#dokumentasi-api)
-13. [Skema Database](#skema-database)
-14. [Catatan Pengembang](#catatan-pengembang)
+12. [Autentikasi & Routing Berbasis Peran](#autentikasi--routing-berbasis-peran)
+13. [Dokumentasi API](#dokumentasi-api)
+14. [Dokumentasi API Admin](#dokumentasi-api-admin)
+15. [Skema Database](#skema-database)
+16. [Catatan Pengembang](#catatan-pengembang)
 
 ---
 
@@ -308,6 +310,51 @@ Setelah database di-seed, gunakan akun berikut untuk login:
 
 ---
 
+## Autentikasi & Routing Berbasis Peran
+
+Sistem menggunakan autentikasi berbasis email dan kata sandi dengan token sesi. Setelah login, pengguna secara otomatis diarahkan ke dashboard sesuai perannya.
+
+### Alur Login
+
+1. Pengguna mengakses `/login`
+2. Masukkan **email** dan **kata sandi**
+3. Sistem memverifikasi kredensial dan memeriksa status akun
+4. Jika berhasil, pengguna diarahkan ke dashboard sesuai peran:
+   - `admin` → `/admin/dashboard`
+   - `sarpras` → `/sarpras/dashboard`
+   - `teknisi` → `/teknisi/dashboard`
+   - `guru` → `/guru/dashboard`
+   - `kepala_sekolah` → `/kepsek/dashboard`
+
+### Proteksi Rute
+
+- Semua dashboard dilindungi oleh **proxy** (`src/proxy.ts`) yang memeriksa cookie `auth_token`
+- Jika pengguna tidak terautentikasi, mereka diarahkan ke `/login`
+- Jika pengguna dengan peran yang salah mencoba mengakses dashboard lain (misal: guru mengakses `/admin/dashboard`), sistem akan mengarahkan mereka kembali ke dashboard yang sesuai dengan peran mereka
+- Tidak ada link pendaftaran publik — semua akun dibuat oleh Admin melalui menu Manajemen Pengguna
+
+### Struktur URL
+
+| Path | Fungsi |
+|------|--------|
+| `/login` | Halaman login |
+| `/` | Redirect otomatis ke dashboard sesuai peran |
+| `/admin/dashboard` | Dashboard Admin |
+| `/sarpras/dashboard` | Dashboard Sarpras |
+| `/teknisi/dashboard` | Dashboard Teknisi |
+| `/guru/dashboard` | Dashboard Guru |
+| `/kepsek/dashboard` | Dashboard Kepala Sekolah |
+
+### Keamanan
+
+- Kata sandi di-hash menggunakan **bcrypt** sebelum disimpan di database
+- Token sesi disimpan dalam cookie `httpOnly` untuk keamanan
+- Status pengguna dapat dinonaktifkan oleh Admin (soft delete)
+- Jika akun dinonaktifkan, pengguna tidak dapat login dan melihat pesan: *"Akun Anda telah dinonaktifkan. Silakan hubungi Admin."*
+
+---
+
+
 ## Dokumentasi API
 
 ### POST `/api/auth/login`
@@ -327,10 +374,11 @@ Login pengguna.
   "user": {
     "id": 1,
     "username": "admin",
-    "nama": "Gue di Perpustakaan",
+    "nama": "Ustadz Ahmad Fauzi",
     "role": "admin",
     "jabatan": "Kepala Sarpras"
-  }
+  },
+  "token": "abc123..."
 }
 ```
 
@@ -415,8 +463,165 @@ Health check — verifikasi koneksi database.
   "db": "ok"
 }
 ```
+---
+
+## Dokumentasi API Admin
+
+> **Catatan:** Semua endpoint admin memerlukan header `Authorization: Bearer <token>` dan hanya dapat diakses oleh pengguna dengan peran `admin`.
+
+### GET `/api/admin/users`
+Mendapatkan daftar semua pengguna.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `role` (optional) — Filter berdasarkan peran (`admin`, `sarpras`, `teknisi`, `guru`, `kepala_sekolah`)
+
+**Response (200):**
+```json
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "nama": "Ustadz Ahmad Fauzi",
+      "email": "admin@yaabunayya.sch.id",
+      "role": "admin",
+      "status": "aktif",
+      "jabatan": "Kepala Sarpras"
+    }
+  ]
+}
+```
 
 ---
+
+### POST `/api/admin/users`
+Membuat pengguna baru.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "username": "userbaru",
+  "nama": "Nama Lengkap",
+  "email": "user@example.com",
+  "role": "guru",
+  "jabatan": "Guru Kelas 5B",
+  "password": "password123",
+  "status": "aktif"
+}
+```
+
+**Response (201):**
+```json
+{
+  "user": {
+    "id": 6,
+    "username": "userbaru",
+    "nama": "Nama Lengkap",
+    "email": "user@example.com",
+    "role": "guru",
+    "status": "aktif",
+    "jabatan": "Guru Kelas 5B"
+  }
+}
+```
+
+---
+
+### PATCH `/api/admin/users/:id`
+Mengubah informasi pengguna atau peran.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body (semua field opsional):**
+```json
+{
+  "nama": "Nama Baru",
+  "email": "emailbaru@example.com",
+  "role": "sarpras",
+  "jabatan": "Staff Sarpras",
+  "password": "passwordbaru"
+}
+```
+
+**Response (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "nama": "Nama Baru",
+    "role": "sarpras",
+    "status": "aktif",
+    "jabatan": "Staff Sarpras"
+  }
+}
+```
+
+---
+
+### PATCH `/api/admin/users/:id/status`
+Mengubah status pengguna antara `aktif` dan `nonaktif`.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "status": "nonaktif"
+}
+```
+
+**Response (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "nama": "Ustadz Ahmad Fauzi",
+    "role": "admin",
+    "status": "nonaktif"
+  }
+}
+```
+
+---
+
+### DELETE `/api/admin/users/:id`
+Menonaktifkan pengguna (soft delete).
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+```json
+{
+  "message": "Pengguna berhasil dinonaktifkan"
+}
+```
+
+---
+
 
 ## Skema Database
 
@@ -426,11 +631,13 @@ Health check — verifikasi koneksi database.
 |-------|------|-----------|
 | `id` | SERIAL (PK) | Auto increment |
 | `username` | VARCHAR(100) UNIQUE NOT NULL | Username login |
-| `password` | VARCHAR(200) NOT NULL | Password (plaintext untuk demo) |
+| `password_hash` | VARCHAR(200) NOT NULL | Hash password (bcrypt) |
 | `nama` | VARCHAR(200) NOT NULL | Nama lengkap |
 | `email` | VARCHAR(200) | Email |
-| `role` | user_role NOT NULL DEFAULT 'guru' | Role pengguna |
+| `role` | user_role NOT NULL DEFAULT 'guru' | Peran pengguna |
+| `status` | user_status NOT NULL DEFAULT 'aktif' | Status akun (aktif/nonaktif) |
 | `jabatan` | VARCHAR(200) | Jabatan |
+| `token` | VARCHAR(200) | Token sesi untuk API |
 | `created_at` | TIMESTAMP NOT NULL DEFAULT NOW() | Waktu dibuat |
 
 ### Tabel: `ruangan`
@@ -561,6 +768,10 @@ Health check — verifikasi koneksi database.
 - `teknisi`
 - `guru`
 - `kepala_sekolah`
+
+### `user_status`
+- `aktif`
+- `nonaktif`
 
 ### `tipe_ruangan`
 - `Kelas`

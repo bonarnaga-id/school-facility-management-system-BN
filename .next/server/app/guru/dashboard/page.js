@@ -1,0 +1,13 @@
+var R=require("../../../chunks/ssr/[turbopack]_runtime.js")("server/app/guru/dashboard/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__12fza7x._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_esm_build_templates_app-page_10_7ji6.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0gk_-pp._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0ucemvw._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0d1~7s7._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_0inhx6q._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_forbidden_0ghu-f7.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_unauthorized_0cjv-23.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_global-error_0lgvd_..js")
+R.c("server/chunks/ssr/_next-internal_server_app_guru_dashboard_page_actions_0__w9m4.js")
+R.m(24961)
+module.exports=R.m(24961).exports

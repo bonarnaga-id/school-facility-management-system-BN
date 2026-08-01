@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 
-type User = { id: number; username: string; nama: string; role: string; jabatan?: string; email?: string };
+type User = { id: number; username: string; nama: string; role: string; jabatan?: string; email?: string; token?: string };
 type Ruangan = { id: number; kode: string; nama: string; gedung: string; lantai: number; kapasitas: number; tipe: string; penanggungJawab?: string; status: string };
 type Aset = { id: number; kodeAset: string; nama: string; kategori: string; ruanganId?: number; kondisi: string; status: string; tanggalPerolehan?: string; harga: string; penanggungJawab?: string; deskripsi?: string; merk?: string; tahun?: number; createdAt?: string };
 type Pemeliharaan = { id: number; kode: string; asetId?: number; judul: string; jenis: string; prioritas: string; status: string; tanggalLapor: string; tanggalTarget?: string; tanggalSelesai?: string; pelapor: string; teknisiId?: number; biaya: string; deskripsi?: string; catatanTeknisi?: string };
@@ -54,9 +55,18 @@ function statusMtnTone(s:string){
   return "purple";
 }
 
+const ROLE_BADGE_TONE: Record<string, string> = {
+  admin: "red",
+  sarpras: "blue",
+  teknisi: "orange",
+  guru: "green",
+  kepala_sekolah: "purple",
+};
+
 const ROLE_NAV: Record<string, {k:string; l:string; icon:string; desc:string}[]> = {
   admin: [
     {k:"dashboard", l:"Dasbor", icon:"◧", desc:"Ringkasan & Statistik"},
+    {k:"pengguna", l:"Manajemen Pengguna", icon:"👥", desc:"Kelola akun pengguna"},
     {k:"aset", l:"Manajemen Aset", icon:"📦", desc:"Inventaris aset sekolah"},
     {k:"ruangan", l:"Ruangan & Lokasi", icon:"🏫", desc:"Kelola gedung & kelas"},
     {k:"pemeliharaan", l:"Pemeliharaan", icon:"🔧", desc:"Work order & perbaikan"},
@@ -87,7 +97,7 @@ const ROLE_NAV: Record<string, {k:string; l:string; icon:string; desc:string}[]>
 };
 
 const ROLE_HEADER_TITLES: Record<string, {[key: string]: string}> = {
-  admin: {dashboard:"Dasbor Sarpras", aset:"Manajemen Aset Sekolah", ruangan:"Ruangan & Lokasi", pemeliharaan:"Pemeliharaan & Perbaikan", jadwal:"Jadwal Pemeliharaan Rutin", laporan:"Laporan & Analitik"},
+  admin: {dashboard:"Dasbor Sarpras", pengguna:"Manajemen Pengguna", aset:"Manajemen Aset Sekolah", ruangan:"Ruangan & Lokasi", pemeliharaan:"Pemeliharaan & Perbaikan", jadwal:"Jadwal Pemeliharaan Rutin", laporan:"Laporan & Analitik"},
   sarpras: {dashboard:"Dasbor Sarpras", aset:"Manajemen Aset Sekolah", ruangan:"Ruangan & Lokasi", pemeliharaan:"Pemeliharaan & Perbaikan", jadwal:"Jadwal Pemeliharaan Rutin", laporan:"Laporan & Analitik"},
   teknisi: {dashboard:"Dasbor Teknisi", pemeliharaan:"Pemeliharaan Saya", aset:"Detail Aset"},
   guru: {dashboard:"Dasbor Guru", pemeliharaan:"Buat Laporan Pemeliharaan"},
@@ -104,6 +114,7 @@ function getHeaderTitle(role: string, tab: string): string {
 }
 
 function getHeaderDesc(role: string, tab: string, stats: any, filteredAset: any[]): string {
+  if (tab === "pengguna") return "Kelola akun pengguna, peran, dan status";
   if (role === "teknisi") {
     if (tab === "dashboard") return "Work order dan tugas pemeliharaan saya";
     if (tab === "pemeliharaan") return "Kelola work order yang ditugaskan";
@@ -147,7 +158,8 @@ function canView(role: string, tab: string): boolean {
   return getRoleNav(role).some(item => item.k === tab);
 }
 
-export default function Page(){
+export default function Page({ initialRole }: { initialRole?: string } = {}){
+  const router = useRouter();
   const [user, setUser] = useState<User|null>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -157,12 +169,15 @@ export default function Page(){
     }
     return null;
   });
+  const [token, setToken] = useState<string|null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("yb_token");
+    }
+    return null;
+  });
   const [authLoading, setAuthLoading] = useState(false);
-  const [loginForm, setLoginForm] = useState({username:"admin", password:"admin123"});
-  const [loginError, setLoginError] = useState("");
-  const [loginBusy, setLoginBusy] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard"|"aset"|"ruangan"|"pemeliharaan"|"jadwal"|"laporan">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard"|"pengguna"|"aset"|"ruangan"|"pemeliharaan"|"jadwal"|"laporan">("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // data
@@ -199,6 +214,20 @@ export default function Page(){
   const [editingJadwal, setEditingJadwal] = useState<Jadwal|null>(null);
   const [jadwalForm, setJadwalForm] = useState<any>({});
 
+  // user management
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [userForm, setUserForm] = useState<any>({});
+  const [qUser, setQUser] = useState("");
+  const [fRoleUser, setFRoleUser] = useState("");
+  const [userLoading, setUserLoading] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: "success"|"error"} | null>(null);
+
+  const showToast = (message: string, type: "success"|"error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   async function loadAll(){
     setLoadingData(true);
     try{
@@ -232,7 +261,12 @@ export default function Page(){
   const fetchRuangan = async ()=>{ const r=await fetch("/api/ruangan"); if(r.ok) setRuanganList(await r.json()); };
   const fetchMtn = async ()=>{ const r=await fetch("/api/pemeliharaan"); if(r.ok) setMtnList(await r.json()); };
   const fetchJadwal = async ()=>{ const r=await fetch("/api/jadwal"); if(r.ok) setJadwalList(await r.json()); };
-  const fetchUsers = async ()=>{ const r=await fetch("/api/users"); if(r.ok) setUsersList(await r.json()); };
+  const fetchUsers = async ()=>{
+    const headers: any = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const r = await fetch("/api/admin/users", { headers });
+    if (r.ok) setUsersList(await r.json());
+  };
 
   useEffect(()=>{
     if(!user) return;
@@ -246,24 +280,11 @@ export default function Page(){
     if(user) console.log("[APP] user state changed:", user?.username);
   },[user]);
 
-  const handleLogin = async (e?:any)=>{
-    e?.preventDefault();
-    console.log("[LOGIN] attempt", loginForm);
-    setLoginBusy(true); setLoginError("");
-    try{
-      const r = await fetch("/api/auth/login",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(loginForm)});
-      const data = await r.json();
-      console.log("[LOGIN] response", r.status, data);
-      if(!r.ok) throw new Error(data.error||"Gagal login");
-      setUser(data.user);
-      localStorage.setItem("yb_user", JSON.stringify(data.user));
-    }catch(err:any){ console.error("[LOGIN] error", err); setLoginError(err.message); }
-    finally{ setLoginBusy(false); }
-  };
-
   const handleLogout = ()=>{
     setUser(null);
+    setToken(null);
     localStorage.removeItem("yb_user");
+    localStorage.removeItem("yb_token");
   };
 
   const filteredAset = useMemo(()=>{
@@ -396,8 +417,57 @@ export default function Page(){
     try{ const r=await fetch(`/api/jadwal/${id}`,{method:"DELETE"}); if(!r.ok) throw new Error(); }catch{ setJadwalList(prev); }
   };
 
+  // User Management
+  const openAddUser = ()=>{ setEditingUser(null); setUserForm({role:"guru", status:"aktif"}); setShowUserModal(true); };
+  const openEditUser = (u:any)=>{ setEditingUser(u); setUserForm({...u}); setShowUserModal(true); };
+  const saveUser = async ()=>{
+    if(!userForm.username || !userForm.nama) return showToast("Username dan nama wajib diisi", "error");
+    setUserLoading(true);
+    try{
+      const headers: any = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const isEdit = !!editingUser;
+      const url = isEdit ? `/api/admin/users/${editingUser.id}` : "/api/admin/users";
+      const method = isEdit ? "PATCH" : "POST";
+      const body = isEdit ? userForm : { ...userForm, password: "admin123" };
+      const r = await fetch(url, { method, headers, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!r.ok) { showToast(data.error || "Gagal simpan", "error"); return; }
+      if (isEdit) setUsersList(p => p.map(x => x.id === editingUser.id ? data.user : x));
+      else setUsersList(p => [data.user, ...p]);
+      setShowUserModal(false);
+      showToast(isEdit ? "Pengguna berhasil diperbarui" : "Pengguna berhasil ditambahkan");
+    }catch{ showToast("Gagal simpan", "error"); }
+    finally{ setUserLoading(false); }
+  };
+  const toggleUserStatus = async (u: any)=>{
+    const newStatus = u.status === "aktif" ? "nonaktif" : "aktif";
+    setUserLoading(true);
+    try{
+      const headers: any = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const r = await fetch(`/api/admin/users/${u.id}/status`, { method: "PATCH", headers, body: JSON.stringify({ status: newStatus }) });
+      const data = await r.json();
+      if (!r.ok) { showToast(data.error || "Gagal update status", "error"); return; }
+      setUsersList(p => p.map(x => x.id === u.id ? data.user : x));
+      showToast(`Status pengguna diubah menjadi ${newStatus}`);
+    }catch{ showToast("Gagal update status", "error"); }
+    finally{ setUserLoading(false); }
+  };
+
   const ruanganById = useMemo(()=>{ const m:any={}; ruanganList.forEach(r=>m[r.id]=r); return m; },[ruanganList]);
   const asetById = useMemo(()=>{ const m:any={}; asetList.forEach(a=>m[a.id]=a); return m; },[asetList]);
+
+  const userRole = user ? (user.role === "kepala_sekolah" ? "kepsek" : user.role) : "";
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (initialRole && initialRole !== userRole) {
+      router.replace(`/${userRole}/dashboard`);
+    }
+  }, [initialRole, userRole, user, router]);
 
   if(authLoading){
     console.log("[APP] authLoading=true, showing splash");
@@ -405,79 +475,18 @@ export default function Page(){
   }
 
   if(!user){
-    console.log("[APP] user is null, showing login page");
-    return (
-      <div className="min-h-screen flex bg-[#FFFBF5]">
-        <div className="flex-1 hidden lg:flex flex-col justify-between p-12 bg-[#FF2D00] text-white relative overflow-hidden">
-          <div className="absolute -right-40 -top-40 w-[600px] h-[600px] bg-[#FFD60A] rounded-full opacity-20"/>
-          <div className="absolute -left-40 -bottom-40 w-[500px] h-[500px] bg-white rounded-full opacity-10"/>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl grid place-items-center"><img src="/logo.svg" className="w-10 h-10 object-contain" alt="logo"/></div>
-              <div><div className="font-bold leading-none">YAA BUNAYYA</div><div className="text-xs opacity-80">Islamic School</div></div>
-            </div>
-          </div>
-          <div className="relative z-10">
-            <h1 className="text-[42px] leading-[0.95] font-bold tracking-tight">Manajemen Aset Sekolah Jadi Lebih Mudah & Amanah</h1>
-            <p className="mt-6 text-lg opacity-90 max-w-[480px]">Kelola seluruh aset, ruangan, dan pemeliharaan TK-SD-SMP Islam dalam satu dashboard yang indah dan mudah dipakai.</p>
-            <div className="mt-10 grid grid-cols-3 gap-4 max-w-[460px]">
-              {[
-                {k:"500+", l:"Aset Terkelola"},
-                {k:"15", l:"Ruangan"},
-                {k:"24/7", l:"Pemantauan"},
-              ].map(i=><div key={i.l} className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10"><div className="text-2xl font-bold">{i.k}</div><div className="text-xs opacity-70">{i.l}</div></div>)}
-            </div>
-          </div>
-          <div className="relative z-10 text-xs opacity-60">© {new Date().getFullYear()} Yaa Bunayya Islamic School - TK-SD-SMP Islam</div>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
-          <div className="w-full max-w-[420px]">
-            <div className="lg:hidden flex items-center gap-3 mb-8">
-              <img src="/logo.svg" alt="logo" className="w-14 h-14 object-contain bg-white rounded-2xl p-1 shadow"/>
-              <div><div className="font-bold text-[#FF2D00]">YAA BUNAYYA</div><div className="text-xs text-zinc-500">TK-SD-SMP ISLAM</div></div>
-            </div>
-            <div className="bg-white rounded-[28px] shadow-[0_20px_80px_rgba(0,0,0,0.08)] border border-zinc-100 p-8">
-              <h2 className="text-[28px] font-bold tracking-tight">Masuk ke Dasbor</h2>
-              <p className="text-sm text-zinc-500 mt-2">Gunakan akun demo untuk menjelajah aplikasi.</p>
-
-              <form onSubmit={handleLogin} className="mt-8 space-y-4">
-                <div><label className="text-xs font-semibold text-zinc-600">Username</label><input value={loginForm.username} onChange={e=>setLoginForm({...loginForm, username:e.target.value})} className="mt-1 w-full h-12 px-4 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#FF2D00]/20 focus:border-[#FF2D00] bg-zinc-50" placeholder="admin"/></div>
-                <div><label className="text-xs font-semibold text-zinc-600">Password</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm({...loginForm, password:e.target.value})} className="mt-1 w-full h-12 px-4 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#FF2D00]/20 focus:border-[#FF2D00] bg-zinc-50" placeholder="••••••••"/></div>
-                {loginError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-3">{loginError}</div>}
-                 <button type="submit" disabled={loginBusy} className="w-full h-12 rounded-xl bg-[#FF2D00] text-white font-semibold hover:bg-[#E62600] transition disabled:opacity-60 flex items-center justify-center gap-2">
-                  {loginBusy ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/> : null}
-                  Masuk
-                </button>
-              </form>
-
-              <div className="mt-8 pt-6 border-t border-zinc-100">
-                <div className="text-[11px] font-bold tracking-widest text-zinc-400 uppercase">Akun Demo</div>
-                <div className="mt-3 grid gap-2">
-                  {[
-                    {u:"admin", p:"admin123", r:"Admin / Kepala Sarpras", c:"bg-[#FF2D00]"},
-                    {u:"sarpras", p:"sarpras123", r:"Staff Sarpras", c:"bg-amber-500"},
-                    {u:"teknisi", p:"teknisi123", r:"Teknisi", c:"bg-blue-500"},
-                    {u:"guru", p:"guru123", r:"Guru", c:"bg-emerald-500"},
-                  ].map(acc=>
-                    <button key={acc.u} onClick={()=>setLoginForm({username:acc.u, password:acc.p})} className="flex items-center justify-between p-3 rounded-xl border border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50 text-left transition">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full grid place-items-center text-white text-xs font-bold ${acc.c}`}>{acc.u[0].toUpperCase()}</div>
-                        <div><div className="text-sm font-semibold">{acc.u}</div><div className="text-xs text-zinc-500">{acc.r}</div></div>
-                      </div>
-                      <div className="text-[10px] px-2 py-1 rounded-full bg-zinc-100 font-mono">{acc.p}</div>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 text-center text-xs text-zinc-400">Data akan otomatis terisi dengan demo realistis saat pertama login.</div>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   console.log("[APP] Rendering main app, user:", user?.username, "role:", user?.role);
+
+  console.log("[APP] Rendering main app, user:", user?.username, "role:", user?.role);
+  
+  // Access control: redirect non-admin away from pengguna tab
+  if (activeTab === "pengguna" && user?.role !== "admin") {
+    setActiveTab("dashboard");
+  }
+  
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex">
       {/* Sidebar */}
@@ -725,6 +734,70 @@ export default function Page(){
                         </div>
                       </>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab==="pengguna" && (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-2xl border border-zinc-100 p-4 flex flex-col lg:flex-row gap-3 items-center justify-between">
+                    <div className="flex flex-1 gap-2 w-full">
+                      <div className="flex-1 relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">🔍</span><input value={qUser} onChange={e=>setQUser(e.target.value)} placeholder="Cari nama, email, username..." className="w-full h-11 pl-10 pr-4 rounded-xl bg-zinc-50 border border-zinc-200 focus:outline-none focus:bg-white focus:border-[#FF2D00]"/></div>
+                      <select value={fRoleUser} onChange={e=>setFRoleUser(e.target.value)} className="h-11 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-sm"><option value="">Semua Peran</option><option value="admin">Admin</option><option value="sarpras">Sarpras</option><option value="teknisi">Teknisi</option><option value="guru">Guru</option><option value="kepala_sekolah">Kepala Sekolah</option></select>
+                    </div>
+                    <button onClick={openAddUser} className="h-11 px-5 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">+ Tambah Pengguna</button>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-zinc-50 text-[11px] tracking-widest uppercase text-zinc-500">
+                          <tr>
+                            <th className="text-left px-4 py-3">Nama</th>
+                            <th className="text-left px-4 py-3">Email</th>
+                            <th className="text-left px-4 py-3">Peran</th>
+                            <th className="text-left px-4 py-3">Status</th>
+                            <th className="text-right px-4 py-3">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {usersList.filter((u: any) => {
+                            const matchSearch = !qUser || `${u.nama} ${u.email || ""} ${u.username}`.toLowerCase().includes(qUser.toLowerCase());
+                            const matchRole = !fRoleUser || u.role === fRoleUser;
+                            return matchSearch && matchRole;
+                          }).map((u: any) => (
+                            <tr key={u.id} className="border-t border-zinc-100 hover:bg-zinc-50">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-[#FF2D00] text-white grid place-items-center text-xs font-bold">{u.nama.split(" ").map((s: string) => s[0]).slice(0, 2).join("")}</div>
+                                  <div>
+                                    <div className="font-semibold">{u.nama}</div>
+                                    <div className="text-[11px] text-zinc-500 font-mono">@{u.username}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-xs">{u.email || "-"}</td>
+                              <td className="px-4 py-3"><Badge tone={ROLE_BADGE_TONE[u.role] || "gray"}>{u.role.replace("_", " ")}</Badge></td>
+                              <td className="px-4 py-3">
+                                <button onClick={() => toggleUserStatus(u)} disabled={userLoading} className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold transition ${u.status === "aktif" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${u.status === "aktif" ? "bg-emerald-500" : "bg-red-500"}`}/>
+                                  {u.status === "aktif" ? "Aktif" : "Nonaktif"}
+                                </button>
+                              </td>
+                              <td className="px-4 py-3 text-right flex justify-end gap-1">
+                                <button onClick={() => openEditUser(u)} disabled={userLoading} className="text-xs px-3 py-1.5 rounded-full bg-zinc-900 text-white hover:bg-black transition disabled:opacity-50">Edit</button>
+                              </td>
+                            </tr>
+                          ))}
+                          {usersList.filter((u: any) => {
+                            const matchSearch = !qUser || `${u.nama} ${u.email || ""} ${u.username}`.toLowerCase().includes(qUser.toLowerCase());
+                            const matchRole = !fRoleUser || u.role === fRoleUser;
+                            return matchSearch && matchRole;
+                          }).length === 0 && (
+                            <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-500">Tidak ada pengguna ditemukan</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1047,6 +1120,54 @@ export default function Page(){
       )}
 
       <style>{`@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}`}</style>
+
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 ${toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+          <span className="text-sm font-semibold">{toast.type === "success" ? "✓" : "✕"}</span>
+          <span className="text-sm">{toast.message}</span>
+        </div>
+      )}
+
+      {showUserModal && (
+        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 lg:p-6 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-xl rounded-t-[28px] lg:rounded-[24px] max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div><div className="font-bold text-lg">{editingUser ? "Edit Pengguna" : "Tambah Pengguna"}</div><div className="text-xs text-zinc-500">{editingUser ? "Perbarui detail dan peran pengguna" : "Buat akun pengguna baru"}</div></div>
+              <button onClick={()=>setShowUserModal(false)} className="w-9 h-9 rounded-full bg-zinc-100 grid place-items-center hover:bg-zinc-200 transition">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div><label className="text-xs font-semibold">Nama Lengkap*</label><input value={userForm.nama||""} onChange={e=>setUserForm({...userForm, nama:e.target.value})} placeholder="Contoh: Ustadz Ahmad Fauzi" className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]"/></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs font-semibold">Email</label><input type="email" value={userForm.email||""} onChange={e=>setUserForm({...userForm, email:e.target.value})} placeholder="email@yaabunayya.sch.id" className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]"/></div>
+                <div><label className="text-xs font-semibold">Jabatan</label><input value={userForm.jabatan||""} onChange={e=>setUserForm({...userForm, jabatan:e.target.value})} placeholder="Contoh: Guru Kelas 5A" className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]"/></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs font-semibold">Peran*</label><select value={userForm.role||"guru"} onChange={e=>setUserForm({...userForm, role:e.target.value})} className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]">
+                  <option value="admin">Admin</option>
+                  <option value="sarpras">Sarpras</option>
+                  <option value="teknisi">Teknisi</option>
+                  <option value="guru">Guru</option>
+                  <option value="kepala_sekolah">Kepala Sekolah</option>
+                </select></div>
+                <div><label className="text-xs font-semibold">Status</label><select value={userForm.status||"aktif"} onChange={e=>setUserForm({...userForm, status:e.target.value})} className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]">
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Nonaktif</option>
+                </select></div>
+              </div>
+              {!editingUser && <div><label className="text-xs font-semibold">Username*</label><input value={userForm.username||""} onChange={e=>setUserForm({...userForm, username:e.target.value})} disabled={userLoading} placeholder="username" className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 disabled:opacity-60"/></div>}
+              {!editingUser && <div><label className="text-xs font-semibold">Kata Sandi*</label><input type="password" value={userForm.password||""} onChange={e=>setUserForm({...userForm, password:e.target.value})} placeholder="Min. 6 karakter" className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]"/></div>}
+              {editingUser && <div><label className="text-xs font-semibold">Kata Sandi Baru</label><input type="password" value={userForm.password||""} onChange={e=>setUserForm({...userForm, password:e.target.value})} placeholder="Kosongkan jika tidak ingin mengubah" className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:outline-none focus:border-[#FF2D00]"/></div>}
+            </div>
+            <div className="p-6 border-t flex gap-3">
+              <button onClick={()=>setShowUserModal(false)} disabled={userLoading} className="flex-1 h-11 rounded-xl bg-zinc-100 font-semibold text-sm hover:bg-zinc-200 transition disabled:opacity-50">Batal</button>
+              <button onClick={saveUser} disabled={userLoading} className="flex-1 h-11 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm hover:bg-[#E62600] transition disabled:opacity-50 flex items-center justify-center gap-2">
+                {userLoading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>}
+                {editingUser ? "Simpan Perubahan" : "Tambah Pengguna"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

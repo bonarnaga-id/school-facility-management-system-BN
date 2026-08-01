@@ -12,6 +12,7 @@ CREATE TYPE status_pemeliharaan AS ENUM ('Diajukan', 'Disetujui', 'Dikerjakan', 
 CREATE TYPE jenis_pemeliharaan AS ENUM ('Rutin', 'Perbaikan', 'Darurat', 'Preventif', 'Inspeksi');
 CREATE TYPE prioritas AS ENUM ('Rendah', 'Sedang', 'Tinggi', 'Mendesak');
 CREATE TYPE user_role AS ENUM ('admin', 'sarpras', 'teknisi', 'guru', 'kepala_sekolah');
+CREATE TYPE user_status AS ENUM ('aktif', 'nonaktif');
 CREATE TYPE tipe_ruangan AS ENUM ('Kelas', 'Laboratorium', 'Perpustakaan', 'Kantor', 'Masjid', 'Aula', 'UKS', 'Kantin', 'Gudang', 'Lapangan', 'Toilet', 'Lainnya');
 CREATE TYPE frekuensi AS ENUM ('Harian', 'Mingguan', 'Bulanan', 'Triwulan', 'Semester', 'Tahunan');
 
@@ -19,11 +20,13 @@ CREATE TYPE frekuensi AS ENUM ('Harian', 'Mingguan', 'Bulanan', 'Triwulan', 'Sem
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,
-  password VARCHAR(200) NOT NULL,
+  password_hash VARCHAR(200) NOT NULL,
   nama VARCHAR(200) NOT NULL,
   email VARCHAR(200),
   role user_role NOT NULL DEFAULT 'guru',
+  status user_status NOT NULL DEFAULT 'aktif',
   jabatan VARCHAR(200),
+  token VARCHAR(200),
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

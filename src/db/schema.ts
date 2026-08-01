@@ -7,17 +7,20 @@ export const statusPemeliharaanEnum = pgEnum("status_pemeliharaan", ["Diajukan",
 export const jenisPemeliharaanEnum = pgEnum("jenis_pemeliharaan", ["Rutin", "Perbaikan", "Darurat", "Preventif", "Inspeksi"]);
 export const prioritasEnum = pgEnum("prioritas", ["Rendah", "Sedang", "Tinggi", "Mendesak"]);
 export const roleEnum = pgEnum("user_role", ["admin", "sarpras", "teknisi", "guru", "kepala_sekolah"]);
+export const userStatusEnum = pgEnum("user_status", ["aktif", "nonaktif"]);
 export const tipeRuanganEnum = pgEnum("tipe_ruangan", ["Kelas", "Laboratorium", "Perpustakaan", "Kantor", "Masjid", "Aula", "UKS", "Kantin", "Gudang", "Lapangan", "Toilet", "Lainnya"]);
 export const frekuensiEnum = pgEnum("frekuensi", ["Harian", "Mingguan", "Bulanan", "Triwulan", "Semester", "Tahunan"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 100 }).notNull().unique(),
-  password: varchar("password", { length: 200 }).notNull(),
+  password_hash: varchar("password_hash", { length: 200 }).notNull(),
   nama: varchar("nama", { length: 200 }).notNull(),
   email: varchar("email", { length: 200 }),
   role: roleEnum("role").notNull().default("guru"),
+  status: userStatusEnum("status").notNull().default("aktif"),
   jabatan: varchar("jabatan", { length: 200 }),
+  token: varchar("token", { length: 200 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

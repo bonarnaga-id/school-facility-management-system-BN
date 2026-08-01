@@ -4,13 +4,13 @@
 -- Example/demo data to populate the database
 -- ============================================================
 
--- Users (passwords are plaintext for demo only)
-INSERT INTO users (username, password, nama, email, role, jabatan) VALUES
-  ('admin', 'admin123', 'Ustadz Ahmad Fauzi', 'admin@yaabunayya.sch.id', 'admin', 'Kepala Sarpras'),
-  ('sarpras', 'sarpras123', 'Ustadzah Siti Aminah', 'sarpras@yaabunayya.sch.id', 'sarpras', 'Staff Sarpras'),
-  ('teknisi', 'teknisi123', 'Pak Joko Prasetyo', 'teknisi@yaabunayya.sch.id', 'teknisi', 'Teknisi Umum'),
-  ('guru', 'guru123', 'Ustadzah Fatimah Zahra', 'guru@yaabunayya.sch.id', 'guru', 'Guru Kelas 5A'),
-  ('kepsek', 'kepsek123', 'Ustadz Muhammad Ilham', 'kepsek@yaabunayya.sch.id', 'kepala_sekolah', 'Kepala Sekolah SMP');
+-- Users (passwords are hashed with bcrypt - demo password: admin123)
+INSERT INTO users (username, password_hash, nama, email, role, status, jabatan) VALUES
+  ('admin', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadz Ahmad Fauzi', 'admin@yaabunayya.sch.id', 'admin', 'aktif', 'Kepala Sarpras'),
+  ('sarpras', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadzah Siti Aminah', 'sarpras@yaabunayya.sch.id', 'sarpras', 'aktif', 'Staff Sarpras'),
+  ('teknisi', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Pak Joko Prasetyo', 'teknisi@yaabunayya.sch.id', 'teknisi', 'aktif', 'Teknisi Umum'),
+  ('guru', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadzah Fatimah Zahra', 'guru@yaabunayya.sch.id', 'guru', 'aktif', 'Guru Kelas 5A'),
+  ('kepsek', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadz Muhammad Ilham', 'kepsek@yaabunayya.sch.id', 'kepala_sekolah', 'aktif', 'Kepala Sekolah SMP');
 
 -- Ruangan (Rooms)
 INSERT INTO ruangan (kode, nama, gedung, lantai, kapasitas, tipe, penanggung_jawab, status) VALUES

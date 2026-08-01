@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/sarpras/layout,_N_T_/sarpras/dashboard/layout,_N_T_/sarpras/dashboard/page,_N_T_/sarpras/dashboard"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/sarpras/dashboard/__PAGE__",
+    "/sarpras/dashboard",
+    "/sarpras",
+    "/_index",
+    "/_head"
+  ]
+}

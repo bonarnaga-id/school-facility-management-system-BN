@@ -4,7 +4,31 @@
       "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
       "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
     ],
+    "[project]/src/app/admin/dashboard/page": [
+      "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
+      "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
+    ],
+    "[project]/src/app/guru/dashboard/page": [
+      "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
+      "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
+    ],
+    "[project]/src/app/kepsek/dashboard/page": [
+      "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
+      "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
+    ],
+    "[project]/src/app/login/page": [
+      "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
+      "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
+    ],
     "[project]/src/app/page": [
+      "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
+      "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
+    ],
+    "[project]/src/app/sarpras/dashboard/page": [
+      "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
+      "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
+    ],
+    "[project]/src/app/teknisi/dashboard/page": [
       "static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2",
       "static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2"
     ]

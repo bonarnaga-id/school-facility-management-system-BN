@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/kepsek/layout,_N_T_/kepsek/dashboard/layout,_N_T_/kepsek/dashboard/page,_N_T_/kepsek/dashboard"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/kepsek/dashboard/__PAGE__",
+    "/kepsek/dashboard",
+    "/kepsek",
+    "/_index",
+    "/_head"
+  ]
+}

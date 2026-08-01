@@ -1,6 +1,10 @@
 {
   "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js",
+  "/api/admin/users/[id]/route": "app/api/admin/users/[id]/route.js",
+  "/api/admin/users/[id]/status/route": "app/api/admin/users/[id]/status/route.js",
+  "/api/admin/users/route": "app/api/admin/users/route.js",
   "/api/aset/[id]/route": "app/api/aset/[id]/route.js",
   "/api/aset/route": "app/api/aset/route.js",
   "/api/auth/login/route": "app/api/auth/login/route.js",
@@ -14,5 +18,10 @@
   "/api/ruangan/route": "app/api/ruangan/route.js",
   "/api/seed/route": "app/api/seed/route.js",
   "/api/users/route": "app/api/users/route.js",
-  "/page": "app/page.js"
+  "/guru/dashboard/page": "app/guru/dashboard/page.js",
+  "/kepsek/dashboard/page": "app/kepsek/dashboard/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/sarpras/dashboard/page": "app/sarpras/dashboard/page.js",
+  "/teknisi/dashboard/page": "app/teknisi/dashboard/page.js"
 }

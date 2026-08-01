@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/guru/layout,_N_T_/guru/dashboard/layout,_N_T_/guru/dashboard/page,_N_T_/guru/dashboard"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/guru/dashboard/__PAGE__",
+    "/guru/dashboard",
+    "/guru",
+    "/_index",
+    "/_head"
+  ]
+}

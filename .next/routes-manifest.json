@@ -23,6 +23,22 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/api/admin/users/[id]",
+      "regex": "^/api/admin/users/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/users/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/users/[id]/status",
+      "regex": "^/api/admin/users/([^/]+?)/status(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/users/(?<nxtPid>[^/]+?)/status(?:/)?$"
+    },
+    {
       "page": "/api/aset/[id]",
       "regex": "^/api/aset/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -73,6 +89,18 @@
       "regex": "^/_not\\-found(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin/dashboard",
+      "regex": "^/admin/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/dashboard(?:/)?$"
+    },
+    {
+      "page": "/api/admin/users",
+      "regex": "^/api/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/users(?:/)?$"
     },
     {
       "page": "/api/aset",
@@ -127,6 +155,36 @@
       "regex": "^/api/users(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/users(?:/)?$"
+    },
+    {
+      "page": "/guru/dashboard",
+      "regex": "^/guru/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/guru/dashboard(?:/)?$"
+    },
+    {
+      "page": "/kepsek/dashboard",
+      "regex": "^/kepsek/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/kepsek/dashboard(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/sarpras/dashboard",
+      "regex": "^/sarpras/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sarpras/dashboard(?:/)?$"
+    },
+    {
+      "page": "/teknisi/dashboard",
+      "regex": "^/teknisi/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/teknisi/dashboard(?:/)?$"
     }
   ],
   "dataRoutes": [],

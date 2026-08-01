@@ -2,22 +2,28 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, ruangan, aset, pemeliharaan, jadwalPemeliharaan } from "@/db/schema";
 import { sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
 
 export async function POST() {
   try {
-    // Clear existing (optional) - check if empty first
     const existingUsers = await db.select().from(users).limit(1);
     if (existingUsers.length > 0) {
       return NextResponse.json({ message: "Data sudah ada, skip seeding", seeded: false });
     }
 
-    // Users
+    const defaultPassword = "admin123";
+    const hashedPassword = await hashPassword(defaultPassword);
+
     const seededUsers = await db.insert(users).values([
-      { username: "admin", password: "admin123", nama: "Ustadz Ahmad Fauzi", email: "admin@yaabunayya.sch.id", role: "admin", jabatan: "Kepala Sarpras" },
-      { username: "sarpras", password: "sarpras123", nama: "Ustadzah Siti Aminah", email: "sarpras@yaabunayya.sch.id", role: "sarpras", jabatan: "Staff Sarpras" },
-      { username: "teknisi", password: "teknisi123", nama: "Pak Joko Prasetyo", email: "teknisi@yaabunayya.sch.id", role: "teknisi", jabatan: "Teknisi Umum" },
-      { username: "guru", password: "guru123", nama: "Ustadzah Fatimah Zahra", email: "guru@yaabunayya.sch.id", role: "guru", jabatan: "Guru Kelas 5A" },
-      { username: "kepsek", password: "kepsek123", nama: "Ustadz Muhammad Ilham", email: "kepsek@yaabunayya.sch.id", role: "kepala_sekolah", jabatan: "Kepala Sekolah SMP" },
+      { username: "admin", password_hash: hashedPassword, nama: "Ustadz Ahmad Fauzi", email: "admin@yaabunayya.sch.id", role: "admin", jabatan: "Kepala Sarpras", status: "aktif" },
+      { username: "sarpras", password_hash: hashedPassword, nama: "Ustadzah Siti Aminah", email: "sarpras@yaabunayya.sch.id", role: "sarpras", jabatan: "Staff Sarpras", status: "aktif" },
+      { username: "teknisi", password_hash: hashedPassword, nama: "Pak Joko Prasetyo", email: "teknisi@yaabunayya.sch.id", role: "teknisi", jabatan: "Teknisi Umum", status: "aktif" },
+      { username: "guru", password_hash: hashedPassword, nama: "Ustadzah Fatimah Zahra", email: "guru@yaabunayya.sch.id", role: "guru", jabatan: "Guru Kelas 5A", status: "aktif" },
+      { username: "kepsek", password_hash: hashedPassword, nama: "Ustadz Muhammad Ilham", email: "kepsek@yaabunayya.sch.id", role: "kepala_sekolah", jabatan: "Kepala Sekolah SMP", status: "aktif" },
     ]).returning();
 
     // Ruangan
