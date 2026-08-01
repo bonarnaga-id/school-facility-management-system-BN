@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Plus_Jakarta_Sans, Lexend } from "next/font/google";
 import "./globals.css";
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
+});
+
+const lexend = Lexend({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-lexend",
+});
 
 export const metadata: Metadata = {
   title: "Yaa Bunayya - Sistem Manajemen Aset & Pemeliharaan",
@@ -10,8 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="id">
-      <body className="bg-[#FFF8F0] text-zinc-900 antialiased font-sans">
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Lexend:wght@500;700&display=swap" rel="stylesheet" />
+      <body className={`${jakarta.variable} ${lexend.variable} bg-[#FFF8F0] text-zinc-900 antialiased font-sans`}>
         {children}
       </body>
     </html>

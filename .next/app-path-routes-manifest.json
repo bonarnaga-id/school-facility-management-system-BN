@@ -1,0 +1,18 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/aset/[id]/route": "/api/aset/[id]",
+  "/api/aset/route": "/api/aset",
+  "/api/auth/login/route": "/api/auth/login",
+  "/api/dashboard/stats/route": "/api/dashboard/stats",
+  "/api/health/route": "/api/health",
+  "/api/jadwal/[id]/route": "/api/jadwal/[id]",
+  "/api/jadwal/route": "/api/jadwal",
+  "/api/pemeliharaan/[id]/route": "/api/pemeliharaan/[id]",
+  "/api/pemeliharaan/route": "/api/pemeliharaan",
+  "/api/ruangan/[id]/route": "/api/ruangan/[id]",
+  "/api/ruangan/route": "/api/ruangan",
+  "/api/seed/route": "/api/seed",
+  "/api/users/route": "/api/users",
+  "/page": "/"
+}

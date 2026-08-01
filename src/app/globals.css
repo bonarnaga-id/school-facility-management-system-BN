@@ -7,10 +7,10 @@
 }
 
 * {
-  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  font-family: "Plus Jakarta Sans", var(--font-jakarta), system-ui, -apple-system, sans-serif;
 }
 h1,h2,h3,.brand-font {
-  font-family: "Lexend", sans-serif;
+  font-family: "Lexend", var(--font-lexend), sans-serif;
 }
 ::-webkit-scrollbar {
   width: 6px;

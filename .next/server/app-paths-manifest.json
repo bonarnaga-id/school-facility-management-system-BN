@@ -1,0 +1,18 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/aset/[id]/route": "app/api/aset/[id]/route.js",
+  "/api/aset/route": "app/api/aset/route.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/dashboard/stats/route": "app/api/dashboard/stats/route.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/jadwal/[id]/route": "app/api/jadwal/[id]/route.js",
+  "/api/jadwal/route": "app/api/jadwal/route.js",
+  "/api/pemeliharaan/[id]/route": "app/api/pemeliharaan/[id]/route.js",
+  "/api/pemeliharaan/route": "app/api/pemeliharaan/route.js",
+  "/api/ruangan/[id]/route": "app/api/ruangan/[id]/route.js",
+  "/api/ruangan/route": "app/api/ruangan/route.js",
+  "/api/seed/route": "app/api/seed/route.js",
+  "/api/users/route": "app/api/users/route.js",
+  "/page": "app/page.js"
+}

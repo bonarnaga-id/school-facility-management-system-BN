@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
 
 type User = { id: number; username: string; nama: string; role: string; jabatan?: string; email?: string };
 type Ruangan = { id: number; kode: string; nama: string; gedung: string; lantai: number; kapasitas: number; tipe: string; penanggungJawab?: string; status: string };
@@ -16,6 +17,7 @@ const STATUS_MTN = ["Diajukan","Disetujui","Dikerjakan","Selesai","Ditolak","Men
 const TIPE_RUANGAN = ["Kelas","Laboratorium","Perpustakaan","Kantor","Masjid","Aula","UKS","Kantin","Gudang","Lapangan","Toilet","Lainnya"];
 const FREKUENSI = ["Harian","Mingguan","Bulanan","Triwulan","Semester","Tahunan"];
 const GEDUNG = ["Gedung TK","Gedung SD","Gedung SMP","Gedung Pusat","Gedung Sarpras"];
+const _now = Date.now();
 
 function Badge({ children, tone="gray" }: { children:any, tone?:string }) {
   const map:any = {
@@ -54,8 +56,16 @@ function statusMtnTone(s:string){
 }
 
 export default function Page(){
-  const [user, setUser] = useState<User|null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState<User|null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("yb_user");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
+  const [authLoading, setAuthLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({username:"admin", password:"admin123"});
   const [loginError, setLoginError] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
@@ -97,25 +107,12 @@ export default function Page(){
   const [editingJadwal, setEditingJadwal] = useState<Jadwal|null>(null);
   const [jadwalForm, setJadwalForm] = useState<any>({});
 
-  useEffect(()=>{
-    const saved = localStorage.getItem("yb_user");
-    if(saved){
-      try{ setUser(JSON.parse(saved)); }catch{}
-    }
-    setAuthLoading(false);
-  },[]);
-
-  useEffect(()=>{
-    if(!user) return;
-    loadAll();
-  },[user]);
-
-  const loadAll = async ()=>{
+  async function loadAll(){
     setLoadingData(true);
     try{
       await Promise.all([fetchStats(), fetchAset(), fetchRuangan(), fetchMtn(), fetchJadwal(), fetchUsers()]);
     }finally{ setLoadingData(false); }
-  };
+  }
 
   const fetchStats = async ()=>{
     const r = await fetch("/api/dashboard/stats");
@@ -123,11 +120,9 @@ export default function Page(){
       const data = await r.json();
       setStats(data);
       if(data.cards.totalAset===0){
-        // auto seed
         setSeeding(true);
         await fetch("/api/seed",{method:"POST"});
         setSeeding(false);
-        // reload
         setTimeout(()=>loadAll(), 800);
       }
     }
@@ -137,6 +132,13 @@ export default function Page(){
   const fetchMtn = async ()=>{ const r=await fetch("/api/pemeliharaan"); if(r.ok) setMtnList(await r.json()); };
   const fetchJadwal = async ()=>{ const r=await fetch("/api/jadwal"); if(r.ok) setJadwalList(await r.json()); };
   const fetchUsers = async ()=>{ const r=await fetch("/api/users"); if(r.ok) setUsersList(await r.json()); };
+
+  useEffect(()=>{
+    if(!user) return;
+    setTimeout(() => loadAll());
+    // loadAll is a stable function declaration; adding it to deps would trigger unnecessary reruns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[user]);
 
   const handleLogin = async (e?:any)=>{
     e?.preventDefault();
@@ -290,7 +292,7 @@ export default function Page(){
   const asetById = useMemo(()=>{ const m:any={}; asetList.forEach(a=>m[a.id]=a); return m; },[asetList]);
 
   if(authLoading){
-    return <div className="min-h-screen grid place-items-center bg-[#FFFBF5]"><div className="animate-pulse flex flex-col items-center gap-4"><img src="/logo.png" alt="logo" className="w-24 h-24 object-contain"/><div className="h-2 w-24 bg-orange-100 rounded-full overflow-hidden"><div className="h-full bg-[#FF2D00] animate-[shimmer_1s_infinite] w-1/2"/></div></div></div>;
+    return <div className="min-h-screen grid place-items-center bg-[#FFFBF5]"><div className="animate-pulse flex flex-col items-center gap-4"><Image src="/logo.svg" alt="logo" width={96} height={96} className="w-24 h-24 object-contain"/><div className="h-2 w-24 bg-orange-100 rounded-full overflow-hidden"><div className="h-full bg-[#FF2D00] animate-[shimmer_1s_infinite] w-1/2"/></div></div></div>;
   }
 
   if(!user){
@@ -301,7 +303,7 @@ export default function Page(){
           <div className="absolute -left-40 -bottom-40 w-[500px] h-[500px] bg-white rounded-full opacity-10"/>
           <div className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl grid place-items-center"><img src="/logo.png" className="w-10 h-10 object-contain" alt="logo"/></div>
+              <div className="w-12 h-12 bg-white rounded-xl grid place-items-center"><Image src="/logo.svg" alt="logo" width={40} height={40} className="w-10 h-10 object-contain"/></div>
               <div><div className="font-bold leading-none">YAA BUNAYYA</div><div className="text-xs opacity-80">Islamic School</div></div>
             </div>
           </div>
@@ -321,7 +323,7 @@ export default function Page(){
         <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
           <div className="w-full max-w-[420px]">
             <div className="lg:hidden flex items-center gap-3 mb-8">
-              <img src="/logo.png" alt="logo" className="w-14 h-14 object-contain bg-white rounded-2xl p-1 shadow"/>
+              <Image src="/logo.svg" alt="logo" width={56} height={56} className="w-14 h-14 object-contain bg-white rounded-2xl p-1 shadow"/>
               <div><div className="font-bold text-[#FF2D00]">YAA BUNAYYA</div><div className="text-xs text-zinc-500">TK-SD-SMP ISLAM</div></div>
             </div>
             <div className="bg-white rounded-[28px] shadow-[0_20px_80px_rgba(0,0,0,0.08)] border border-zinc-100 p-8">
@@ -370,7 +372,7 @@ export default function Page(){
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-[300px] bg-white border-r border-zinc-100 shadow-[0_0_50px_rgba(0,0,0,0.04)] flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen? "translate-x-0":"-translate-x-full"}`}>
         <div className="h-[84px] px-6 flex items-center gap-3 border-b border-zinc-100">
-          <img src="/logo.png" alt="logo" className="w-12 h-12 object-contain bg-white rounded-xl shadow-sm border border-zinc-100 p-1"/>
+          <Image src="/logo.svg" alt="logo" width={48} height={48} className="w-12 h-12 object-contain bg-white rounded-xl shadow-sm border border-zinc-100 p-1"/>
           <div className="flex-1 min-w-0">
             <div className="font-bold text-[15px] leading-none text-[#FF2D00] brand-font">YAA BUNAYYA</div>
             <div className="text-[10px] tracking-widest font-bold text-zinc-500 mt-1">ISLAMIC SCHOOL</div>
@@ -526,7 +528,7 @@ export default function Page(){
                         <h3 className="font-bold relative">Jadwal Mendatang</h3>
                         <div className="mt-4 space-y-3 relative">
                           {jadwalList.slice(0,3).map(j=>{
-                            const isSoon = new Date(j.tanggalSelanjutnya).getTime() - Date.now() < 7*24*3600*1000;
+                            const isSoon = new Date(j.tanggalSelanjutnya).getTime() - _now < 7*24*3600*1000;
                             return <div key={j.id} className="flex gap-3"><div className={`w-10 h-10 rounded-xl grid place-items-center text-xs font-bold ${isSoon?"bg-[#FF2D00]":"bg-zinc-800"}`}>{new Date(j.tanggalSelanjutnya).getDate()}</div><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{j.judul}</div><div className="text-xs text-zinc-400 truncate">{new Date(j.tanggalSelanjutnya).toLocaleDateString("id-ID",{day:"numeric", month:"short"})} • {j.penanggungJawab}</div></div></div>;
                           })}
                         </div>
@@ -697,7 +699,7 @@ export default function Page(){
                     {jadwalList.length===0 ? <div className="col-span-3 bg-white rounded-2xl border border-dashed p-12 text-center text-zinc-500">Belum ada jadwal rutin</div> :
                     jadwalList.map(j=>{
                       const ast = j.asetId? asetById[j.asetId]:null;
-                      const daysLeft = Math.ceil((new Date(j.tanggalSelanjutnya).getTime() - Date.now())/ (24*3600*1000));
+                      const daysLeft = Math.ceil((new Date(j.tanggalSelanjutnya).getTime() - _now)/ (24*3600*1000));
                       const urgent = daysLeft<=3;
                       return (
                         <div key={j.id} className={`bg-white rounded-[20px] border p-5 ${urgent? "border-red-200 bg-red-50/30":"border-zinc-100"}`}>
