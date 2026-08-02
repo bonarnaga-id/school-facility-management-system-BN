@@ -44,8 +44,15 @@ export async function POST(req: NextRequest) {
     }
 
     const isValid = await comparePassword(password, user.password_hash);
-    if (!isValid) {
+    const isPlaintext = !isValid && user.password_hash === password;
+    if (!isValid && !isPlaintext) {
       return NextResponse.json({ error: "Email atau kata sandi salah" }, { status: 401 });
+    }
+
+    // If plaintext match, upgrade to bcrypt
+    if (isPlaintext) {
+      const newHash = await hashPassword(password);
+      await db.update(users).set({ password_hash: newHash }).where(eq(users.id, user.id));
     }
 
     const token = generateToken();
@@ -58,6 +65,7 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
+      path: "/",
     });
     return response;
   } catch (e) {

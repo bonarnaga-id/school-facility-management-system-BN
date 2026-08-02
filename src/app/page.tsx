@@ -273,7 +273,8 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
       if (r.status === 403) showToast("Akses ditolak. Silakan login kembali.", "error");
       return;
     }
-    setUsersList(await r.json());
+    const data = await r.json();
+    setUsersList(Array.isArray(data.users) ? data.users : []);
   };
 
   useEffect(()=>{
