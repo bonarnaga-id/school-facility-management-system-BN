@@ -356,19 +356,26 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   const openEditRuangan = (r:Ruangan)=>{ setEditingRuangan(r); setRuanganForm({...r}); setShowRuanganModal(true); };
   const saveRuangan = async ()=>{
     if(!ruanganForm.nama) return alert("Nama ruangan wajib");
+    if(!ruanganForm.kode) return alert("Kode ruangan wajib");
+    if(!ruanganForm.gedung) return alert("Gedung ruangan wajib");
     const isEdit=!!editingRuangan;
     const tempId=Date.now();
     const optimistic:Ruangan = { id:isEdit?editingRuangan!.id:tempId, kode:ruanganForm.kode||`RNG-${tempId.toString().slice(-4)}`, nama:ruanganForm.nama, gedung:ruanganForm.gedung, lantai:Number(ruanganForm.lantai)||1, kapasitas:Number(ruanganForm.kapasitas)||0, tipe:ruanganForm.tipe, penanggungJawab:ruanganForm.penanggungJawab, status:ruanganForm.status };
     if(isEdit) setRuanganList(p=>p.map(x=>x.id===editingRuangan!.id? optimistic:x)); else setRuanganList(p=>[optimistic,...p]);
     setShowRuanganModal(false);
     try{
+      console.log("[API] saveRuangan payload:", ruanganForm);
       const url=isEdit?`/api/ruangan/${editingRuangan!.id}`:"/api/ruangan";
       const method=isEdit?"PUT":"POST";
       const r=await fetch(url,{method, headers:{"Content-Type":"application/json"}, body:JSON.stringify(ruanganForm)});
-      if(!r.ok) throw new Error();
-      const saved=await r.json();
+      console.log("[API] saveRuangan:", method, url, "status:", r.status);
+      const data = await r.json().catch(() => ({}));
+      console.log("[API] saveRuangan response:", data);
+      if(!r.ok) { alert(data.error || "Gagal simpan ruangan"); fetchRuangan(); return; }
+      const saved=data;
       if(isEdit) setRuanganList(p=>p.map(x=>x.id===editingRuangan!.id? saved:x)); else setRuanganList(p=>p.map(x=>x.id===tempId? saved:x));
       fetchStats();
+      showToast(isEdit ? "Ruangan berhasil diperbarui" : "Ruangan berhasil ditambahkan");
     }catch{ alert("Gagal simpan ruangan"); fetchRuangan(); }
   };
   const deleteRuangan = async (id:number)=>{
