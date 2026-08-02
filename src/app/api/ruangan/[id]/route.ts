@@ -18,8 +18,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       status: body.status,
     }).where(eq(ruangan.id, Number(id))).returning();
     return NextResponse.json(updated[0]);
-  } catch (e) {
-    console.error(e);
+  } catch (e: any) {
+    console.error("[API] PUT /api/ruangan/:id error:", e);
+    if (e?.code === "23505") {
+      return NextResponse.json({ error: "Kode ruangan sudah digunakan oleh ruangan lain." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Gagal update ruangan" }, { status: 500 });
   }
 }

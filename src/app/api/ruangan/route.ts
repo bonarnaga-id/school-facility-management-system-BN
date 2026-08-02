@@ -37,8 +37,11 @@ export async function POST(req: NextRequest) {
       status: body.status || "Aktif",
     }).returning();
     return NextResponse.json(inserted[0]);
-  } catch (e) {
+  } catch (e: any) {
     console.error("[API] POST /api/ruangan error:", e);
+    if (e?.code === "23505") {
+      return NextResponse.json({ error: "Kode ruangan sudah digunakan. Gunakan kode lain." }, { status: 409 });
+    }
     const message = e instanceof Error ? e.message : "Gagal menambah ruangan";
     return NextResponse.json({ error: message }, { status: 500 });
   }

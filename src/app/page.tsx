@@ -352,7 +352,19 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   };
 
   // CRUD RUANGAN
-  const openAddRuangan = ()=>{ setEditingRuangan(null); setRuanganForm({gedung:"Gedung SD", tipe:"Kelas", lantai:1, kapasitas:30, status:"Aktif"}); setShowRuanganModal(true); };
+  const openAddRuangan = ()=>{ 
+    setEditingRuangan(null); 
+    setRuanganForm({
+      kode: `RNG-${Date.now().toString().slice(-5)}`,
+      nama: "", 
+      gedung: "Gedung SD", 
+      tipe: "Kelas", 
+      lantai: 1, 
+      kapasitas: 30, 
+      status: "Aktif"
+    }); 
+    setShowRuanganModal(true); 
+  };
   const openEditRuangan = (r:Ruangan)=>{ setEditingRuangan(r); setRuanganForm({...r}); setShowRuanganModal(true); };
   const saveRuangan = async ()=>{
     if(!ruanganForm.nama) return alert("Nama ruangan wajib");
