@@ -452,14 +452,17 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
     if(!userForm.username || !userForm.nama) return showToast("Username dan nama wajib diisi", "error");
     setUserLoading(true);
     try{
+      const authToken = token || (typeof window !== "undefined" ? localStorage.getItem("yb_token") : null);
       const headers: any = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+      console.log("[USER] saveUser, token present:", !!authToken);
       const isEdit = !!editingUser;
       const url = isEdit ? `/api/admin/users/${editingUser.id}` : "/api/admin/users";
       const method = isEdit ? "PATCH" : "POST";
       const body = isEdit ? userForm : { ...userForm, password: "admin123" };
       const r = await fetch(url, { method, headers, body: JSON.stringify(body) });
       const data = await r.json();
+      console.log("[USER] saveUser response:", r.status, data);
       if (!r.ok) { showToast(data.error || "Gagal simpan", "error"); return; }
       if (isEdit) setUsersList(p => p.map(x => x.id === editingUser.id ? data.user : x));
       else setUsersList(p => [data.user, ...p]);
@@ -472,14 +475,34 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
     const newStatus = u.status === "aktif" ? "nonaktif" : "aktif";
     setUserLoading(true);
     try{
+      const authToken = token || (typeof window !== "undefined" ? localStorage.getItem("yb_token") : null);
       const headers: any = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+      console.log("[USER] toggleUserStatus, token present:", !!authToken);
       const r = await fetch(`/api/admin/users/${u.id}/status`, { method: "PATCH", headers, body: JSON.stringify({ status: newStatus }) });
       const data = await r.json();
+      console.log("[USER] toggleUserStatus response:", r.status, data);
       if (!r.ok) { showToast(data.error || "Gagal update status", "error"); return; }
       setUsersList(p => p.map(x => x.id === u.id ? data.user : x));
       showToast(`Status pengguna diubah menjadi ${newStatus}`);
     }catch{ showToast("Gagal update status", "error"); }
+    finally{ setUserLoading(false); }
+  };
+  const deleteUser = async (u: any)=>{
+    if (!confirm(`Hapus pengguna "${u.nama}"? Aksi ini tidak bisa dibatalkan.`)) return;
+    setUserLoading(true);
+    try{
+      const authToken = token || (typeof window !== "undefined" ? localStorage.getItem("yb_token") : null);
+      const headers: any = { "Content-Type": "application/json" };
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+      console.log("[USER] deleteUser, token present:", !!authToken);
+      const r = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE", headers });
+      const data = await r.json();
+      console.log("[USER] deleteUser response:", r.status, data);
+      if (!r.ok) { showToast(data.error || "Gagal menghapus pengguna", "error"); return; }
+      setUsersList(p => p.filter(x => x.id !== u.id));
+      showToast(`Pengguna "${u.nama}" berhasil dihapus`);
+    }catch{ showToast("Gagal menghapus pengguna", "error"); }
     finally{ setUserLoading(false); }
   };
 
@@ -817,6 +840,7 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
                               </td>
                               <td className="px-4 py-3 text-right flex justify-end gap-1">
                                 <button onClick={() => openEditUser(u)} disabled={userLoading} className="text-xs px-3 py-1.5 rounded-full bg-zinc-900 text-white hover:bg-black transition disabled:opacity-50">Edit</button>
+                                <button onClick={() => deleteUser(u)} disabled={userLoading} className="text-xs px-2 py-1.5 rounded-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition disabled:opacity-50" title="Hapus">🗑️</button>
                               </td>
                             </tr>
                           ))}
