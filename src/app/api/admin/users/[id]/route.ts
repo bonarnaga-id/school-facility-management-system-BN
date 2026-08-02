@@ -68,13 +68,12 @@ export async function DELETE(
       return NextResponse.json({ error: "ID pengguna tidak valid" }, { status: 400 });
     }
 
-    // Soft delete by setting status to nonaktif
-    const [updated] = await db.update(users).set({ status: "nonaktif" }).where(eq(users.id, userId)).returning();
-    if (!updated) {
+    const [deleted] = await db.delete(users).where(eq(users.id, userId)).returning();
+    if (!deleted) {
       return NextResponse.json({ error: "Pengguna tidak ditemukan" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Pengguna berhasil dinonaktifkan" });
+    return NextResponse.json({ message: "Pengguna berhasil dihapus" });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Gagal menonaktifkan pengguna" }, { status: 500 });

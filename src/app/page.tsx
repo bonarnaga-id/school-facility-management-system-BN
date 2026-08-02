@@ -163,7 +163,7 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   const [user, setUser] = useState<User|null>(() => {
     if (typeof window !== "undefined") {
       try {
-        const saved = localStorage.getItem("yb_user");
+        const saved = localStorage.getItem("yb_user") || sessionStorage.getItem("yb_user");
         if (saved) return JSON.parse(saved);
       } catch {}
     }
@@ -171,7 +171,7 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   });
   const [token, setToken] = useState<string|null>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("yb_token");
+      return localStorage.getItem("yb_token") || sessionStorage.getItem("yb_token");
     }
     return null;
   });
@@ -231,7 +231,9 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   async function loadAll(){
     setLoadingData(true);
     try{
-      await Promise.all([fetchStats(), fetchAset(), fetchRuangan(), fetchMtn(), fetchJadwal(), fetchUsers()]);
+      const promises = [fetchStats(), fetchAset(), fetchRuangan(), fetchMtn(), fetchJadwal()];
+      if (user?.role === "admin") promises.push(fetchUsers());
+      await Promise.all(promises);
     }finally{ setLoadingData(false); }
   }
 
@@ -249,7 +251,7 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
     if(r.ok){
       const data = await r.json();
       setStats(data);
-      if(data.cards.totalAset===0){
+      if(data.cards.totalAset===0 && user?.role === "admin"){
         setSeeding(true);
         await fetch("/api/seed",{method:"POST"});
         setSeeding(false);
@@ -294,6 +296,8 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
     setToken(null);
     localStorage.removeItem("yb_user");
     localStorage.removeItem("yb_token");
+    sessionStorage.removeItem("yb_user");
+    sessionStorage.removeItem("yb_token");
   };
 
   const filteredAset = useMemo(()=>{

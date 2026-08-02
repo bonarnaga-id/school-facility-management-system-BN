@@ -9,9 +9,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("yb_user");
+    const saved = localStorage.getItem("yb_user") || sessionStorage.getItem("yb_user");
     if (saved) {
       try {
         const user = JSON.parse(saved);
@@ -37,7 +38,16 @@ export default function LoginPage() {
         return;
       }
       localStorage.setItem("yb_user", JSON.stringify(data.user));
-      localStorage.setItem("yb_token", data.token); // <-- tambahkan baris ini
+      localStorage.setItem("yb_token", data.token);
+      if (rememberMe) {
+        localStorage.setItem("yb_user", JSON.stringify(data.user));
+        localStorage.setItem("yb_token", data.token);
+      } else {
+        sessionStorage.setItem("yb_user", JSON.stringify(data.user));
+        sessionStorage.setItem("yb_token", data.token);
+        localStorage.removeItem("yb_user");
+        localStorage.removeItem("yb_token");
+      }
       const role = data.user.role === "kepala_sekolah" ? "kepsek" : data.user.role;
       router.replace(`/${role}/dashboard`);
     } catch {
@@ -53,7 +63,7 @@ export default function LoginPage() {
         <div className="bg-white rounded-[28px] border border-zinc-100 p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)]">
           <div className="text-center mb-8">
             <div className="w-20 h-20 mx-auto bg-white rounded-2xl shadow-sm border border-zinc-100 p-2 mb-4">
-              <img src="/logo.svg" alt="logo" className="w-full h-full object-contain"/>
+              <img src="/Logo Sekolah Yaa Bunayya.jpg" alt="logo" className="w-full h-full object-contain"/>
             </div>
             <h1 className="text-2xl font-bold brand-font text-[#FF2D00]">YAA BUNAYYA</h1>
             <p className="text-xs text-zinc-500 mt-1">Sistem Manajemen Aset & Pemeliharaan</p>
@@ -92,7 +102,7 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="w-4 h-4 rounded border-zinc-300 text-[#FF2D00] focus:ring-[#FF2D00]"/>
+                <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 rounded border-zinc-300 text-[#FF2D00] focus:ring-[#FF2D00]"/>
                 <span className="text-xs text-zinc-600">Ingat saya</span>
               </label>
               <button type="button" className="text-xs text-[#FF2D00] font-semibold hover:underline" onClick={() => alert("Hubungi administrator untuk reset kata sandi.")}>
@@ -111,7 +121,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-xs text-zinc-400">
-            © 2026 Yayasan Tarbiyah Sunnah Yaa Bunayya Palembang
+            © 2026 Yayasan Tarbiyah Sunnah Palembang
           </div>
         </div>
       </div>
