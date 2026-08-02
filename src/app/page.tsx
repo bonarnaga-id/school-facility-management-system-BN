@@ -211,7 +211,6 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   const [editingMtn, setEditingMtn] = useState<Pemeliharaan|null>(null);
   const [mtnForm, setMtnForm] = useState<any>({});
   const [fotoPreview, setFotoPreview] = useState<string|null>(null);
-  const [fotoBuktiFile, setFotoBuktiFile] = useState<File|null>(null);
   const [showJadwalModal, setShowJadwalModal] = useState(false);
   const [editingJadwal, setEditingJadwal] = useState<Jadwal|null>(null);
   const [jadwalForm, setJadwalForm] = useState<any>({});
@@ -403,24 +402,14 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   };
 
   // CRUD PEMELIHARAAN
-  const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  const openAddMtn = ()=>{ setEditingMtn(null); setMtnForm({jenis:"Perbaikan", prioritas:"Sedang", status:"Diajukan", pelapor:user?.nama||"", biaya:"0"}); setFotoPreview(null); setFotoBuktiFile(null); setShowMtnModal(true); };
-  const openEditMtn = (m:Pemeliharaan)=>{ setEditingMtn(m); setMtnForm({...m, asetId:m.asetId?.toString(), teknisiId:m.teknisiId?.toString()}); setFotoPreview(m.fotoBukti||null); setFotoBuktiFile(null); setShowMtnModal(true); };
+  const openAddMtn = ()=>{ setEditingMtn(null); setMtnForm({jenis:"Perbaikan", prioritas:"Sedang", status:"Diajukan", pelapor:user?.nama||"", biaya:"0"}); setFotoPreview(null); setShowMtnModal(true); };
+  const openEditMtn = (m:Pemeliharaan)=>{ setEditingMtn(m); setMtnForm({...m, asetId:m.asetId?.toString(), teknisiId:m.teknisiId?.toString()}); setFotoPreview(m.fotoBukti||null); setShowMtnModal(true); };
   const saveMtn = async ()=>{
     if(!mtnForm.judul) return alert("Judul wajib");
     const isEdit=!!editingMtn; const tempId=Date.now();
-    let fotoData = mtnForm.fotoBukti;
-    if(fotoBuktiFile){
-      try{ fotoData = await fileToBase64(fotoBuktiFile); }catch{ alert("Gagal membaca file foto"); return; }
-    }
-    const payload:any = { ...mtnForm, fotoBukti: fotoData };
+    const payload:any = { ...mtnForm };
     if(isEdit) delete payload.kode;
-    const optimistic:Pemeliharaan = { id:isEdit?editingMtn!.id:tempId, kode:mtnForm.kode||`MNT-${tempId.toString().slice(-5)}`, judul:mtnForm.judul, jenis:mtnForm.jenis, prioritas:mtnForm.prioritas, status:mtnForm.status, tanggalLapor:new Date().toISOString(), pelapor:mtnForm.pelapor, biaya:mtnForm.biaya||"0", deskripsi:mtnForm.deskripsi, asetId:mtnForm.asetId?Number(mtnForm.asetId):undefined, fotoBukti:fotoData } as any;
+    const optimistic:Pemeliharaan = { id:isEdit?editingMtn!.id:tempId, kode:mtnForm.kode||`MNT-${tempId.toString().slice(-5)}`, judul:mtnForm.judul, jenis:mtnForm.jenis, prioritas:mtnForm.prioritas, status:mtnForm.status, tanggalLapor:new Date().toISOString(), pelapor:mtnForm.pelapor, biaya:mtnForm.biaya||"0", deskripsi:mtnForm.deskripsi, asetId:mtnForm.asetId?Number(mtnForm.asetId):undefined, fotoBukti:mtnForm.fotoBukti } as any;
     if(isEdit) setMtnList(p=>p.map(x=>x.id===editingMtn!.id? {...x,...optimistic}:x)); else setMtnList(p=>[optimistic,...p]);
     setShowMtnModal(false);
     try{
@@ -1170,18 +1159,24 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
                <div><label className="text-xs font-semibold">Catatan Teknisi</label><textarea value={mtnForm.catatanTeknisi||""} onChange={e=>setMtnForm({...mtnForm, catatanTeknisi:e.target.value})} rows={2} placeholder="Diisi teknisi saat pengerjaan" className="mt-1 w-full px-3 py-3 rounded-xl border border-zinc-200 bg-zinc-50"/></div>
                <div>
                  <label className="text-xs font-semibold">Foto Bukti Kerusakan</label>
-                 <input type="file" accept="image/*" capture="environment" onChange={(e)=>{
+                 <input type="file" accept="image/*" capture="environment" onChange={async (e) => {
                    const file = e.target.files?.[0];
-                   if(!file) return;
-                   setFotoBuktiFile(file);
-                   const reader = new FileReader();
-                   reader.onload = () => setFotoPreview(reader.result as string);
-                   reader.readAsDataURL(file);
+                   if (!file) return;
+                   const formData = new FormData();
+                   formData.append("file", file);
+                   formData.append("folder", "pemeliharaan");
+                   try {
+                     const r = await fetch("/api/upload", { method: "POST", body: formData });
+                     const data = await r.json();
+                     if (!r.ok) { alert(data.error || "Gagal upload foto"); return; }
+                     setMtnForm({ ...mtnForm, fotoBukti: data.url || data.path });
+                     setFotoPreview(data.url || data.path);
+                   } catch { alert("Gagal upload foto"); }
                  }} className="mt-1 w-full text-xs text-zinc-600 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#FF2D00] file:text-white hover:file:bg-[#E62600]"/>
                  {(fotoPreview || mtnForm.fotoBukti) && (
                    <div className="mt-3 relative inline-block">
                      <img src={fotoPreview || mtnForm.fotoBukti} alt="Preview" className="max-h-40 rounded-xl border border-zinc-200"/>
-                     <button type="button" onClick={()=>{ setFotoPreview(null); setFotoBuktiFile(null); setMtnForm({...mtnForm, fotoBukti:""}); }} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs grid place-items-center">✕</button>
+                     <button type="button" onClick={()=>{ setFotoPreview(null); setMtnForm({...mtnForm, fotoBukti:""}); }} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs grid place-items-center">✕</button>
                    </div>
                  )}
                </div>

@@ -17,6 +17,7 @@
   "/api/ruangan/[id]/route": "app/api/ruangan/[id]/route.js",
   "/api/ruangan/route": "app/api/ruangan/route.js",
   "/api/seed/route": "app/api/seed/route.js",
+  "/api/upload/route": "app/api/upload/route.js",
   "/api/users/route": "app/api/users/route.js",
   "/guru/dashboard/page": "app/guru/dashboard/page.js",
   "/kepsek/dashboard/page": "app/kepsek/dashboard/page.js",

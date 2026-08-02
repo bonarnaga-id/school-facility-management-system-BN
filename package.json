@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.111.0",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "dotenv": "17.3.1",
@@ -20,7 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.17",
-    "@types/node": "22.19.15",
+    "@types/node": "^22.19.15",
     "@types/pg": "8.18.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

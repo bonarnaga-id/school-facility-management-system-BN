@@ -17,6 +17,7 @@
   "/api/ruangan/[id]/route": "/api/ruangan/[id]",
   "/api/ruangan/route": "/api/ruangan",
   "/api/seed/route": "/api/seed",
+  "/api/upload/route": "/api/upload",
   "/api/users/route": "/api/users",
   "/guru/dashboard/page": "/guru/dashboard",
   "/kepsek/dashboard/page": "/kepsek/dashboard",
