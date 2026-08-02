@@ -95,7 +95,7 @@ export default function LoginPage() {
                 <input type="checkbox" className="w-4 h-4 rounded border-zinc-300 text-[#FF2D00] focus:ring-[#FF2D00]"/>
                 <span className="text-xs text-zinc-600">Ingat saya</span>
               </label>
-              <button type="button" className="text-xs text-[#FF2D00] font-semibold hover:underline">
+              <button type="button" className="text-xs text-[#FF2D00] font-semibold hover:underline" onClick={() => alert("Hubungi administrator untuk reset kata sandi.")}>
                 Lupa Kata Sandi?
               </button>
             </div>
