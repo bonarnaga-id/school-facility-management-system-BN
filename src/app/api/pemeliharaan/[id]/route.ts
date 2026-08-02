@@ -20,6 +20,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       deskripsi: body.deskripsi,
       catatanTeknisi: body.catatanTeknisi,
       asetId: body.asetId ? Number(body.asetId) : null,
+      fotoBukti: body.fotoBukti,
     }).where(eq(pemeliharaan.id, Number(id))).returning();
     return NextResponse.json(updated[0]);
   } catch (e) {

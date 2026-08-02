@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 type User = { id: number; username: string; nama: string; role: string; jabatan?: string; email?: string; token?: string };
 type Ruangan = { id: number; kode: string; nama: string; gedung: string; lantai: number; kapasitas: number; tipe: string; penanggungJawab?: string; status: string };
 type Aset = { id: number; kodeAset: string; nama: string; kategori: string; ruanganId?: number; kondisi: string; status: string; tanggalPerolehan?: string; harga: string; penanggungJawab?: string; deskripsi?: string; merk?: string; tahun?: number; createdAt?: string };
-type Pemeliharaan = { id: number; kode: string; asetId?: number; judul: string; jenis: string; prioritas: string; status: string; tanggalLapor: string; tanggalTarget?: string; tanggalSelesai?: string; pelapor: string; teknisiId?: number; biaya: string; deskripsi?: string; catatanTeknisi?: string };
+type Pemeliharaan = { id: number; kode: string; asetId?: number; judul: string; jenis: string; prioritas: string; status: string; tanggalLapor: string; tanggalTarget?: string; tanggalSelesai?: string; pelapor: string; teknisiId?: number; biaya: string; deskripsi?: string; catatanTeknisi?: string; fotoBukti?: string };
 type Jadwal = { id: number; asetId?: number; judul: string; frekuensi: string; tanggalSelanjutnya: string; penanggungJawab?: string; deskripsi?: string };
 
 const KATEGORI = ["Elektronik","Furniture","Laboratorium","Olahraga","Kebersihan","Kendaraan","ATK","Ibadah","Perpustakaan","Dapur","Keamanan"];
@@ -210,6 +210,8 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   const [showMtnModal, setShowMtnModal] = useState(false);
   const [editingMtn, setEditingMtn] = useState<Pemeliharaan|null>(null);
   const [mtnForm, setMtnForm] = useState<any>({});
+  const [fotoPreview, setFotoPreview] = useState<string|null>(null);
+  const [fotoBuktiFile, setFotoBuktiFile] = useState<File|null>(null);
   const [showJadwalModal, setShowJadwalModal] = useState(false);
   const [editingJadwal, setEditingJadwal] = useState<Jadwal|null>(null);
   const [jadwalForm, setJadwalForm] = useState<any>({});
@@ -401,18 +403,30 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
   };
 
   // CRUD PEMELIHARAAN
-  const openAddMtn = ()=>{ setEditingMtn(null); setMtnForm({jenis:"Perbaikan", prioritas:"Sedang", status:"Diajukan", pelapor:user?.nama||"", biaya:"0"}); setShowMtnModal(true); };
-  const openEditMtn = (m:Pemeliharaan)=>{ setEditingMtn(m); setMtnForm({...m, asetId:m.asetId?.toString(), teknisiId:m.teknisiId?.toString()}); setShowMtnModal(true); };
+  const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const openAddMtn = ()=>{ setEditingMtn(null); setMtnForm({jenis:"Perbaikan", prioritas:"Sedang", status:"Diajukan", pelapor:user?.nama||"", biaya:"0"}); setFotoPreview(null); setFotoBuktiFile(null); setShowMtnModal(true); };
+  const openEditMtn = (m:Pemeliharaan)=>{ setEditingMtn(m); setMtnForm({...m, asetId:m.asetId?.toString(), teknisiId:m.teknisiId?.toString()}); setFotoPreview(m.fotoBukti||null); setFotoBuktiFile(null); setShowMtnModal(true); };
   const saveMtn = async ()=>{
     if(!mtnForm.judul) return alert("Judul wajib");
     const isEdit=!!editingMtn; const tempId=Date.now();
-    const optimistic:Pemeliharaan = { id:isEdit?editingMtn!.id:tempId, kode:mtnForm.kode||`MNT-${tempId.toString().slice(-5)}`, judul:mtnForm.judul, jenis:mtnForm.jenis, prioritas:mtnForm.prioritas, status:mtnForm.status, tanggalLapor:new Date().toISOString(), pelapor:mtnForm.pelapor, biaya:mtnForm.biaya||"0", deskripsi:mtnForm.deskripsi, asetId:mtnForm.asetId?Number(mtnForm.asetId):undefined } as any;
+    let fotoData = mtnForm.fotoBukti;
+    if(fotoBuktiFile){
+      try{ fotoData = await fileToBase64(fotoBuktiFile); }catch{ alert("Gagal membaca file foto"); return; }
+    }
+    const payload:any = { ...mtnForm, fotoBukti: fotoData };
+    if(isEdit) delete payload.kode;
+    const optimistic:Pemeliharaan = { id:isEdit?editingMtn!.id:tempId, kode:mtnForm.kode||`MNT-${tempId.toString().slice(-5)}`, judul:mtnForm.judul, jenis:mtnForm.jenis, prioritas:mtnForm.prioritas, status:mtnForm.status, tanggalLapor:new Date().toISOString(), pelapor:mtnForm.pelapor, biaya:mtnForm.biaya||"0", deskripsi:mtnForm.deskripsi, asetId:mtnForm.asetId?Number(mtnForm.asetId):undefined, fotoBukti:fotoData } as any;
     if(isEdit) setMtnList(p=>p.map(x=>x.id===editingMtn!.id? {...x,...optimistic}:x)); else setMtnList(p=>[optimistic,...p]);
     setShowMtnModal(false);
     try{
       const url=isEdit?`/api/pemeliharaan/${editingMtn!.id}`:"/api/pemeliharaan";
       const method=isEdit?"PUT":"POST";
-      const r=await fetch(url,{method, headers:{"Content-Type":"application/json"}, body:JSON.stringify(mtnForm)});
+      const r=await fetch(url,{method, headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
       if(!r.ok) throw new Error();
       const saved=await r.json();
       if(isEdit) setMtnList(p=>p.map(x=>x.id===editingMtn!.id? saved:x)); else setMtnList(p=>p.map(x=>x.id===tempId? saved:x));
@@ -1152,8 +1166,25 @@ export default function Page({ initialRole }: { initialRole?: string } = {}){
                 <div><label className="text-xs font-semibold">Teknisi</label><select value={mtnForm.teknisiId||""} onChange={e=>setMtnForm({...mtnForm, teknisiId:e.target.value})} className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50"><option value="">Belum ditugaskan</option>{usersList.map(u=><option key={u.id} value={u.id}>{u.nama} - {u.role}</option>)}</select></div>
               </div>
               <div><label className="text-xs font-semibold">Biaya Estimasi / Real (Rp)</label><input type="number" value={mtnForm.biaya||""} onChange={e=>setMtnForm({...mtnForm, biaya:e.target.value})} className="mt-1 w-full h-11 px-3 rounded-xl border border-zinc-200 bg-zinc-50"/></div>
-              <div><label className="text-xs font-semibold">Deskripsi Kerusakan</label><textarea value={mtnForm.deskripsi||""} onChange={e=>setMtnForm({...mtnForm, deskripsi:e.target.value})} rows={3} className="mt-1 w-full px-3 py-3 rounded-xl border border-zinc-200 bg-zinc-50"/></div>
-              <div><label className="text-xs font-semibold">Catatan Teknisi</label><textarea value={mtnForm.catatanTeknisi||""} onChange={e=>setMtnForm({...mtnForm, catatanTeknisi:e.target.value})} rows={2} placeholder="Diisi teknisi saat pengerjaan" className="mt-1 w-full px-3 py-3 rounded-xl border border-zinc-200 bg-zinc-50"/></div>
+               <div><label className="text-xs font-semibold">Deskripsi Kerusakan</label><textarea value={mtnForm.deskripsi||""} onChange={e=>setMtnForm({...mtnForm, deskripsi:e.target.value})} rows={3} className="mt-1 w-full px-3 py-3 rounded-xl border border-zinc-200 bg-zinc-50"/></div>
+               <div><label className="text-xs font-semibold">Catatan Teknisi</label><textarea value={mtnForm.catatanTeknisi||""} onChange={e=>setMtnForm({...mtnForm, catatanTeknisi:e.target.value})} rows={2} placeholder="Diisi teknisi saat pengerjaan" className="mt-1 w-full px-3 py-3 rounded-xl border border-zinc-200 bg-zinc-50"/></div>
+               <div>
+                 <label className="text-xs font-semibold">Foto Bukti Kerusakan</label>
+                 <input type="file" accept="image/*" capture="environment" onChange={(e)=>{
+                   const file = e.target.files?.[0];
+                   if(!file) return;
+                   setFotoBuktiFile(file);
+                   const reader = new FileReader();
+                   reader.onload = () => setFotoPreview(reader.result as string);
+                   reader.readAsDataURL(file);
+                 }} className="mt-1 w-full text-xs text-zinc-600 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#FF2D00] file:text-white hover:file:bg-[#E62600]"/>
+                 {(fotoPreview || mtnForm.fotoBukti) && (
+                   <div className="mt-3 relative inline-block">
+                     <img src={fotoPreview || mtnForm.fotoBukti} alt="Preview" className="max-h-40 rounded-xl border border-zinc-200"/>
+                     <button type="button" onClick={()=>{ setFotoPreview(null); setFotoBuktiFile(null); setMtnForm({...mtnForm, fotoBukti:""}); }} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs grid place-items-center">✕</button>
+                   </div>
+                 )}
+               </div>
             </div>
             <div className="p-6 border-t flex gap-3"><button onClick={()=>setShowMtnModal(false)} className="flex-1 h-11 rounded-xl bg-zinc-100 font-semibold text-sm">Batal</button><button onClick={saveMtn} className="flex-1 h-11 rounded-xl bg-[#FF2D00] text-white font-semibold text-sm">{editingMtn? "Update Laporan":"Kirim Laporan"}</button></div>
           </div>

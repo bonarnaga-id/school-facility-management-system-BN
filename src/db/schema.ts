@@ -71,6 +71,7 @@ export const pemeliharaan = pgTable("pemeliharaan", {
   biaya: numeric("biaya", { precision: 15, scale: 2 }).default("0"),
   deskripsi: text("deskripsi"),
   catatanTeknisi: text("catatan_teknisi"),
+  fotoBukti: text("foto_bukti"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

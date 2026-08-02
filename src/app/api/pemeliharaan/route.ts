@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       biaya: body.biaya ? String(body.biaya) : "0",
       deskripsi: body.deskripsi,
       catatanTeknisi: body.catatanTeknisi,
+      fotoBukti: body.fotoBukti || null,
     }).returning();
     return NextResponse.json(inserted[0]);
   } catch (e) {
