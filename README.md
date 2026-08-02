@@ -53,9 +53,15 @@ Sistem Manajemen Aset & Pemeliharaan adalah aplikasi web berbasis Next.js yang d
 
 ### Manajemen Pemeliharaan
 - Buat work order perbaikan dari guru dan staff
+- **Upload foto bukti kerusakan** via kamera atau file (disimpan di Supabase Storage)
 - Assign teknisi, atur prioritas dan status
 - Lacak biaya estimasi dan realisasi
 - Update status: Diajukan → Disetujui → Dikerjakan → Selesai
+
+### Manajemen Pengguna (Admin)
+- Tambah, edit, hapus, dan toggle status pengguna
+- Hapus pengguna secara permanen (hard delete)
+- Role-based: admin, sarpras, teknisi, guru, kepala_sekolah
 
 ### Jadwal Pemeliharaan Rutin
 - Buat jadwal preventif: harian, mingguan, bulanan, triwulan, semester, tahunan
@@ -80,8 +86,9 @@ Sistem Manajemen Aset & Pemeliharaan adalah aplikasi web berbasis Next.js yang d
 | **Tailwind CSS** | 4.1.17 | Styling |
 | **Drizzle ORM** | 0.45.2 | ORM database |
 | **node-postgres (pg)** | 8.20.0 | Driver PostgreSQL |
-| **Supabase** | — | Hosted PostgreSQL database |
+| **Supabase** | — | Hosted PostgreSQL database & Storage |
 | **Vercel** | — | Hosting & deployment |
+| **@supabase/supabase-js** | — | Supabase client (Storage upload) |
 
 ---
 
@@ -112,6 +119,8 @@ school-facility-management-system-BN/
 │   │   │   │       └── route.ts     # Statistik dashboard
 │   │   │   ├── users/
 │   │   │   │   └── route.ts         # List users
+│   │   │   ├── upload/
+│   │   │   │   └── route.ts         # Upload foto ke Supabase Storage
 │   │   │   ├── seed/
 │   │   │   │   └── route.ts         # Seed data demo
 │   │   │   └── health/
@@ -130,7 +139,8 @@ school-facility-management-system-BN/
 ├── package.json                      # Dependencies
 ├── supabase-schema.sql               # SQL schema untuk Supabase
 ├── supabase-seed.sql                 # SQL seed data
-└── .env.local                        # Environment variables (lokal, di-gitignore)
+├── supabase-add-foto-bukti.sql       # Migration: add foto_bukti column
+├── .env.local                        # Environment variables (lokal, di-gitignore)
 ```
 
 ---
@@ -204,10 +214,26 @@ npm run dev
 # Login dengan akun admin, data otomatis terisi jika database kosong
 ```
 
-Atau panggil API langsung:
+Atau panggil API langkung:
 ```bash
 curl -X POST http://localhost:3000/api/seed
 ```
+
+### 5. Setup Supabase Storage (Foto Bukti Kerusakan)
+
+Untuk fitur upload foto di laporan pemeliharaan, buat Storage bucket:
+
+1. Buka **Supabase Dashboard** → **Storage**
+2. Klik **New bucket**
+3. Isi:
+   - **Name**: `foto-bukti`
+   - **Public bucket**: ✓ (centang)
+4. Klik **Create bucket**
+
+**Dapatkan Service Role Key:**
+1. Buka **Supabase Dashboard** → **Settings** → **API**
+2. Scroll ke **Project API Keys**
+3. Copy `service_role_key`
 
 ---
 
@@ -217,14 +243,16 @@ Buat file `.env.local` di root project:
 
 ```env
 # Supabase PostgreSQL Connection String
-# Dapatkan dari Supabase Dashboard → Settings → Database → Connection string (URI mode)
 DATABASE_URL=postgresql://postgres:[PASSWORD]@db.bjewgisqiskjydebtvmj.supabase.co:6543/postgres
 
-# Supabase Project URL (untuk future client-side features)
+# Supabase Project URL
 NEXT_PUBLIC_SUPABASE_URL=https://bjewgisqiskjydebtvmj.supabase.co
 
-# Supabase Anon Key (untuk future client-side features)
+# Supabase Anon Key (client-side)
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Supabase Service Role Key (server-side, untuk upload foto)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Next.js URL (untuk Vercel deployment)
 NEXT_PUBLIC_URL=https://[your-app].vercel.app
@@ -284,6 +312,7 @@ Di Vercel Dashboard → Project → **Settings** → **Environment Variables**, 
 | `DATABASE_URL` | `postgresql://postgres:[PASSWORD]@db.bjewgisqiskjydebtvmj.supabase.co:6543/postgres` |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://bjewgisqiskjydebtvmj.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (dari Supabase Dashboard → Settings → API) |
 | `NEXT_PUBLIC_URL` | `https://[your-app].vercel.app` |
 
 ### 4. Redeploy
@@ -348,8 +377,10 @@ Sistem menggunakan autentikasi berbasis email dan kata sandi dengan token sesi. 
 ### Keamanan
 
 - Kata sandi di-hash menggunakan **bcrypt** sebelum disimpan di database
-- Token sesi disimpan dalam cookie `httpOnly` untuk keamanan
-- Status pengguna dapat dinonaktifkan oleh Admin (soft delete)
+- Token sesi disimpan di `localStorage` atau `sessionStorage`
+- Jika **Ingat saya** dicentang, kredensial disimpan di `localStorage` (bertahan hingga logout)
+- Jika **Ingat saya** tidak dicentang, kredensial disimpan di `sessionStorage` (hilang saat browser ditutup)
+- Status pengguna dapat dinonaktifkan oleh Admin
 - Jika akun dinonaktifkan, pengguna tidak dapat login dan melihat pesan: *"Akun Anda telah dinonaktifkan. Silakan hubungi Admin."*
 
 ---
@@ -363,7 +394,7 @@ Login pengguna.
 **Request Body:**
 ```json
 {
-  "username": "admin",
+  "login": "admin",
   "password": "admin123"
 }
 ```
@@ -379,6 +410,25 @@ Login pengguna.
     "jabatan": "Kepala Sarpras"
   },
   "token": "abc123..."
+}
+```
+
+---
+
+### POST `/api/upload`
+Mengunggah foto bukti kerusakan ke Supabase Storage.
+
+**Request:** `multipart/form-data`
+```
+file: <image file>
+folder: "pemeliharaan"      # (opsional, default: pemeliharaan)
+```
+
+**Response (200):**
+```json
+{
+  "path": "pemeliharaan/1722560012345-abc123.jpg",
+  "url": "https://bjewgisqiskjydebtvmj.supabase.co/storage/v1/object/public/foto-bukti/pemeliharaan/1722560012345-abc123.jpg"
 }
 ```
 
@@ -606,7 +656,7 @@ Content-Type: application/json
 ---
 
 ### DELETE `/api/admin/users/:id`
-Menonaktifkan pengguna (soft delete).
+Menghapus pengguna secara permanen (hard delete).
 
 **Headers:**
 ```
@@ -616,7 +666,7 @@ Authorization: Bearer <token>
 **Response (200):**
 ```json
 {
-  "message": "Pengguna berhasil dinonaktifkan"
+  "message": "Pengguna berhasil dihapus"
 }
 ```
 
@@ -694,6 +744,7 @@ Authorization: Bearer <token>
 | `biaya` | NUMERIC(15,2) DEFAULT '0' | Biaya |
 | `deskripsi` | TEXT | Deskripsi kerusakan |
 | `catatan_teknisi` | TEXT | Catatan teknisi |
+| `foto_bukti` | TEXT | URL foto bukti kerusakan (Supabase Storage) |
 | `created_at` | TIMESTAMP NOT NULL DEFAULT NOW() | Waktu dibuat |
 
 ### Tabel: `jadwal_pemeliharaan`
@@ -807,9 +858,18 @@ Aplikasi ini menggunakan **Single Page Application (SPA)** dalam satu file `page
 
 Autentikasi dilakukan secara stateless:
 - Login mengirim kredensial ke `/api/auth/login`
-- Server memverifikasi dan mengembalikan data user
-- Client menyimpan user di `localStorage` sebagai `yb_user`
-- Setiap halaman refresh, user di-restore dari `localStorage`
+- Server memverifikasi password dengan bcrypt dan mengembalikan token + data user
+- Jika **Ingat saya** dicentang: kredensial disimpan di `localStorage` (bertahan sampai logout)
+- Jika **Ingat saya** tidak dicentang: kredensial disimpan di `sessionStorage` (hilang saat browser ditutup)
+- Setiap halaman refresh, user di-restore dari `localStorage` atau `sessionStorage`
+
+### File Storage (Foto Bukti Kerusakan)
+
+- Foto diunggah ke **Supabase Storage** bucket `foto-bukti`
+- API endpoint: `POST /api/upload`
+- File dikonversi ke URL publik dan disimpan di kolom `foto_bukti` pada tabel `pemeliharaan`
+- Backend menggunakan `SUPABASE_SERVICE_ROLE_KEY` untuk akses server-side
+- Bucket harus diatur sebagai **public** agar foto dapat dilihat di frontend
 
 ### Database Connection
 
@@ -821,8 +881,10 @@ Database menggunakan **connection pooling** via `pg` library:
 ### Auto-Seeding
 
 Sistem memiliki fitur auto-seeding:
-- Saat login pertama kali, jika `totalAset === 0`, sistem otomatis menjalankan `/api/seed`
+- Hanya dijalankan untuk peran **admin**
+- Saat dashboard dimuat, jika `totalAset === 0`, sistem otomatis menjalankan `/api/seed`
 - Data demo di-load secara otomatis untuk memudahkan testing
+- Untuk role lain (teknisi, guru, kepala sekolah), auto-seeding tidak dijalankan
 
 ### Deployment
 

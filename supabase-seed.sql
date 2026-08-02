@@ -6,11 +6,11 @@
 
 -- Users (passwords are hashed with bcrypt - demo password: admin123)
 INSERT INTO users (username, password_hash, nama, email, role, status, jabatan) VALUES
-  ('admin', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadz Ahmad Fauzi', 'admin@yaabunayya.sch.id', 'admin', 'aktif', 'Kepala Sarpras'),
+  ('admin', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Gue di Perpustakaan', 'admin@yaabunayya.sch.id', 'admin', 'aktif', 'Kepala Sarpras'),
   ('sarpras', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadzah Siti Aminah', 'sarpras@yaabunayya.sch.id', 'sarpras', 'aktif', 'Staff Sarpras'),
-  ('teknisi', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Pak Joko Prasetyo', 'teknisi@yaabunayya.sch.id', 'teknisi', 'aktif', 'Teknisi Umum'),
+  ('teknisi', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Pak Salam', 'teknisi@yaabunayya.sch.id', 'teknisi', 'aktif', 'Teknisi Umum'),
   ('guru', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadzah Fatimah Zahra', 'guru@yaabunayya.sch.id', 'guru', 'aktif', 'Guru Kelas 5A'),
-  ('kepsek', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadz Muhammad Ilham', 'kepsek@yaabunayya.sch.id', 'kepala_sekolah', 'aktif', 'Kepala Sekolah SMP');
+  ('kepsek', '$2b$10$G.UhP01CstENHkg/vjbReeiZIXrtuQT8DYx41J5wHYs0K8N0FQARu', 'Ustadz Wahyu', 'kepsek@yaabunayya.sch.id', 'kepala_sekolah', 'aktif', 'Kepala Sekolah SMP');
 
 -- Ruangan (Rooms)
 INSERT INTO ruangan (kode, nama, gedung, lantai, kapasitas, tipe, penanggung_jawab, status) VALUES
